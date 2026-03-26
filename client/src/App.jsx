@@ -1,121 +1,93 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import './App.css';
 
-function App() {
-  const [count, setCount] = useState(0)
+import MapScreen from './screens/MapScreen';
+import RoutePlanningScreen from './screens/RoutePlanningScreen';
+import AccountScreen from './screens/AccountScreen';
+import ProgressScreen from './screens/ProgressScreen';
 
+// Shared Icons
+
+export function MapIcon() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    <svg viewBox="0 0 24 24">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+      <line x1="8" y1="2" x2="8" y2="18" />
+      <line x1="16" y1="6" x2="16" y2="22" />
+    </svg>
+  );
 }
 
-export default App
+export function ProgressIcon() {
+  return (
+    <svg viewBox="0 0 24 24">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  );
+}
+
+export function UserIcon() {
+  return (
+    <svg viewBox="0 0 24 24">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+// Shared TopBar 
+
+export function TopBar({ onAvatarClick }) {
+  return (
+    <div className="top-bar">
+      <div className="logo">
+        <div className="logo-icon">✓</div>
+        WalkMore
+      </div>
+      <button className="avatar-btn" onClick={onAvatarClick} aria-label="Account">
+        <UserIcon />
+      </button>
+    </div>
+  );
+}
+
+// Shared BottomNav 
+
+export function BottomNav({ active, onChange }) {
+  return (
+    <div className="bottom-nav">
+      <button
+        className={`nav-item ${active === 'map' ? 'active' : ''}`}
+        onClick={() => onChange('map')}
+      >
+        <MapIcon />
+        Map
+      </button>
+      <button
+        className={`nav-item ${active === 'progress' ? 'active' : ''}`}
+        onClick={() => onChange('progress')}
+      >
+        <ProgressIcon />
+        Progress
+      </button>
+    </div>
+  );
+}
+
+// App Root
+
+export default function App() {
+  // 'map' || 'route' || 'account' || 'progress'
+  const [screen, setScreen] = useState('map');
+
+  const navigate = (destination) => setScreen(destination);
+
+  return (
+    <div className="app-shell">
+      {screen === 'map'      && <MapScreen onNavigate={navigate} />}
+      {screen === 'route'    && <RoutePlanningScreen onNavigate={navigate} />}
+      {screen === 'account'  && <AccountScreen onNavigate={navigate} />}
+      {screen === 'progress' && <ProgressScreen onNavigate={navigate} />}
+    </div>
+  );
+}
