@@ -45,6 +45,11 @@ node server.js
 ## Verifying Everything Works
 **Frontend** — visit http://localhost:5173/
 You should see a default React/Vite "Get Started" screen.
+Since the app is in a mobile device scale, it will by default appear on the left of the screen.
+If you use Chrome to view the localhost, it has a nifty emulator.
+Press f12, and in the top left of the f12 tab will be a phone and laptop symbol.
+Press this symbol and Chrome will enter mobile device emulator mode.
+This makes for a much cleaner viewing, as well as emulates many mobile functionalities, such as touch inputs.
 
 **Backend** — visit http://localhost:5000/api/test
 You should see:
