@@ -68,6 +68,7 @@ function getNearestStations(point, stations, topK = 20) {
 }
 
 function findThreeRoutes(Graph, maxArrivalTime, maxWalkingTime) {
+
     let queue = [[0, 0, 0, 0,[]]]; 
     const targetHalf = maxWalkingTime / 2; 
 
@@ -133,6 +134,9 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
     const stations = buildStationMap();
     const nearestFromSrc = getNearestStations(srcNode, stations, 20);
     const nearestFromDst = getNearestStations(dstNode, stations, 20);
+    const notoverlap = nearestFromDst.filter(itemB => 
+        !nearestFromSrc.some(itemA => itemA.station.id === itemB.station.id)
+    );
     //Uncomment if you need to check what are the nearest stations from each endpoint
     // console.log("\n closest stations from src (Top 20):");
     // console.table(nearestFromSrc.map(item => ({
@@ -170,7 +174,7 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
 
     // Add edges from src to its nearest stations
     for (const itemA of nearestFromSrc) {
-        const p = getTransitRoute(src.lat, src.lon, itemA.station.Location.lat, itemA.station.Location.lon)
+        const p = getWalkingRoute(src.lat, src.lon, itemA.station.Location.lat, itemA.station.Location.lon)
         .then(res => {
             if (res) {
                 const walkMin = Math.round(parseInt(res.totalTime) / 60); //convert sec to min
@@ -182,7 +186,7 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
 
     // Add edges from nearest Stations to dst
     for (const itemB of nearestFromDst) {
-        const p = getTransitRoute(itemB.station.Location.lat, itemB.station.Location.lon, dst.lat, dst.lon)
+        const p = getWalkingRoute(itemB.station.Location.lat, itemB.station.Location.lon, dst.lat, dst.lon)
         .then(res => {
             if (res) {
                 const walkMin = Math.round(parseInt(res.totalTime) / 60); //convert sec to min
@@ -193,8 +197,21 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
     }
 
     //Iterate stations from each 'Island' to find fastest connection
+    if(notoverlap.length === 0){
+        for (const itemB of nearestFromSrc) {
+        const p = getWalkingRoute(itemB.station.Location.lat, itemB.station.Location.lon, dst.lat, dst.lon)
+        .then(res => {
+            if (res) {
+                const walkMin = Math.round(parseInt(res.totalTime) / 60); //convert sec to min
+                Graph.addEdge(itemB.station.id, "1", walkMin, walkMin, res.distance / 1000);
+            }
+        });
+        edgePromises.push(p);
+        }
+    }
+    if(notoverlap.length>0){
     for (const itemA of nearestFromSrc) {
-    for (const itemB of nearestFromDst) {
+    for (const itemB of notoverlap) {
         if (itemA.station.id === itemB.station.id) continue;
 
         // adds to bucket of API call to be made
@@ -213,6 +230,7 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
         edgePromises.push(promise);
     }
     }
+    }
 
     // wait for the calls
     await Promise.all(edgePromises);
@@ -221,7 +239,7 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
     //If you want to see the edges, uncomment
     //Graph.displayGraph();
 
-    const results = findThreeRoutes(Graph, ArrivalTime, WalkingTime);
+    const results = findThreeRoutes(Graph,ArrivalTime, WalkingTime);
 
     console.log("Routes:");
     printRouteSummary("Minimum Walking", results.minWalking);
@@ -251,6 +269,7 @@ function printRouteSummary(title, route) {
     Path: ${pathString}
     Estimated time: ${totalT}min
     Estimated Walking Time: ${walkT}min (${walkPercentage}%)
-    Distance: ${dist.toFixed(2)}m
+    Distance: ${dist.toFixed(2)}km
     =========================================`);
 }
+CalculatePath(40.7684, -73.9857, 40.7686, -73.9855, 40, 20);
