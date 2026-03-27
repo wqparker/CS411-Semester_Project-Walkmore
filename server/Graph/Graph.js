@@ -1,20 +1,5 @@
-class Location {
-    constructor(name, address, lat, lon){
-        this.name = name;
-        this.address = address;
-        this.lat = lat;
-        this.lon = lon;
-    }
-}
-
-class Node {
-    //Node class to represent Bus / Subway stops
-    constructor(id, Location) {
-        this.id = id;          //MTA uses ID as a key for stations
-        this.Location = Location;
-    }
-}
-
+import { Location } from './Location.js';
+import { Node } from './GraphNode.js';
 class TransitGraph {
     // Given source coordinates and destination coordinates, construct a graph.
     // Takes src and dst coordinates in case we need to restrict the search area.
