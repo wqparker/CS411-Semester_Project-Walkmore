@@ -1,4 +1,4 @@
-class Location {
+export class Location {
     constructor(name, address, lat, lon){
         this.name = name;
         this.address = address;
