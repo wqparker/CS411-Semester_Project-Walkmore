@@ -1,13 +1,23 @@
+import { useState } from 'react';
 import { TopBar, BottomNav } from '../App';
 
 export default function RouteResultsScreen({ onNavigate, routeData }) {
-  const { route, optimization, destination } = routeData || {};
+  const { allRoutes, destination } = routeData || {};
+  const [optimization, setOptimization] = useState(routeData?.optimization || 'balanced');
 
-  const optimizationLabels = {
-    time: 'Time Saving',
-    walking: 'Walking Maximize',
-    balanced: 'Balanced',
+  const optimizationOptions = [
+    { id: 'time', label: 'Time Saving' },
+    { id: 'walking', label: 'Max Walking' },
+    { id: 'balanced', label: 'Balanced' },
+  ];
+
+  const routeMap = {
+    time: allRoutes?.fastest,
+    walking: allRoutes?.maxWalkingWithinLimit,
+    balanced: allRoutes?.minWalking,
   };
+
+  const route = routeMap[optimization];
 
   const walkPercentage = route
     ? ((route.walkT / route.totalT) * 100).toFixed(1)
@@ -43,9 +53,44 @@ export default function RouteResultsScreen({ onNavigate, routeData }) {
           <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
             Your Route
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-mid)', marginBottom: 24 }}>
-            {optimizationLabels[optimization]} · To: {destination}
+          <p style={{ fontSize: 14, color: 'var(--text-mid)', marginBottom: 20 }}>
+            To: {destination}
           </p>
+
+          {/* Optimization Switcher */}
+          <div style={{
+            display: 'flex',
+            gap: 8,
+            marginBottom: 24,
+            background: 'var(--surface)',
+            padding: 6,
+            borderRadius: 'var(--radius-md)',
+          }}>
+            {optimizationOptions.map((opt) => {
+              const active = optimization === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setOptimization(opt.id)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 4px',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    background: active ? 'var(--primary)' : 'transparent',
+                    color: active ? '#fff' : 'var(--text-mid)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
 
           {!route ? (
             <div style={{
@@ -63,7 +108,7 @@ export default function RouteResultsScreen({ onNavigate, routeData }) {
               <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
                 <StatCard label="Total Time" value={`${route.totalT} min`} icon="⏱" />
                 <StatCard label="Walking Time" value={`${route.walkT} min`} icon="🚶" />
-                <StatCard label="Distance" value={`${(route.dist / 1000).toFixed(2)} km`} icon="📍" />
+                <StatCard label="Distance" value={`${(route.dist).toFixed(2)} km`} icon="📍" />
               </div>
 
               {/* Walking percentage bar */}

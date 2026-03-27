@@ -52,7 +52,7 @@ function RecenterMap({ position }) {
 // MapScreen 
 export default function MapScreen({ onNavigate }) {
   // Mock user position — will be replaced with real GPS later
-  const userPosition = [40.7128, -74.006]; // New York City
+  const userPosition = [40.7484, -73.9857]; // Empire State Building
 
   return (
     <>
