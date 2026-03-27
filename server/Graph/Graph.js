@@ -1,6 +1,6 @@
 import { Location } from './Location.js';
 import { Node } from './GraphNode.js';
-class TransitGraph {
+export class TransitGraph {
     // Given source coordinates and destination coordinates, construct a graph.
     // Takes src and dst coordinates in case we need to restrict the search area.
     constructor(src,dst) {
@@ -52,7 +52,7 @@ class TransitGraph {
             const node = this.nodes[id];
             const edges = this.adjacencyList[id];
             let edgeString = edges.map(e => 
-                `[→ ${e.nodeId} (T:${e.transitTime}m, W:${e.walkTime}m)]`
+                `[→ ${e.nodeId} (T:${e.transitTime}m, W:${e.walkTime}m), D:${e.distance}m]`
             ).join(", ");
             
             console.log(`${id} (${node.Location.name}): ${edgeString || "(No edges)"}`);
@@ -61,27 +61,3 @@ class TransitGraph {
     }
 }
 
-// Test Graph generation
-// create Graph
-const myGraph = new TransitGraph(new Location("src","-1",40.7592,-73.9871), new Location("dst","-2",40.7692,-73.1851));
-
-// create Nodes
-myGraph.addStop("A", "Times Sq Station", "1",40.7588, -73.9851);
-myGraph.addStop("B", "Grand Central", "2", 40.7527, -73.9772);
-myGraph.addStop("C", "Penn Station", "3", 40.7505, -73.9934);
-
-// create Edges
-myGraph.addEdge(0, "A", 0, 5, 0.4);         // 1
-myGraph.addEdge(0, "C", 0, 10, 0.8);        // 2
-myGraph.addEdge("A", "B", 3, 0, 1.2);       // 3
-myGraph.addEdge("A", 1, 2, 0, 0.5);         // 4
-myGraph.addEdge("B", 1, 4, 0, 1.5);         // 5
-myGraph.addEdge("C", "A", 5, 0, 1.1);       // 6
-myGraph.addEdge("C", "B", 6, 0, 1.8);       // 7
-myGraph.addEdge("B", "A", 3, 0, 1.2);       // 8 
-myGraph.addEdge(1, 0, 0, 15, 2.0);          // 9 
-myGraph.addEdge("A", "C", 5, 0, 1.1);       // 10
-myGraph.addEdge(0, "B", 0, 12, 1.0);        // 11
-
-myGraph.displayGraph();
-console.log("next stops:", myGraph.getNextStops(0));
