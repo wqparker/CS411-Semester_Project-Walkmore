@@ -1,4 +1,6 @@
-const apiKey = 'AIzaSyBYQW3QIOsvT2xQ9vnbx2GCsRf6Yage7zs';
+import 'dotenv/config';
+
+const apiKey = process.env.GOOGLE_API_KEY;
 
 async function getWalkingRoute(srclat, srclon, dstlat, dstlon) {
   //returns shortest walking distance between two location

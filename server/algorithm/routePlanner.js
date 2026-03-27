@@ -1,8 +1,12 @@
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { Node } from '../Graph/GraphNode.js';
 import {Location} from '../Graph/Location.js';
 import {TransitGraph} from '../Graph/Graph.js';
 import {getWalkingRoute, getTransitRoute} from './APICaller.js';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const EARTH_RADIUS_METERS = 6371000;
 
 function toRadians(deg) {
@@ -31,7 +35,7 @@ function estimateWalkMinutes(distanceMeters, walkingSpeedMetersPerMinute = 84) {
 }
 
 function buildStationMap() {
-  const rawData = fs.readFileSync('../Graph/all_stops.json', 'utf-8');
+  const rawData = fs.readFileSync(join(__dirname, '../Graph/all_stops.json'), 'utf-8');
   const stopsData = JSON.parse(rawData);
   const stationMap = new Map();
   const allNodes = stopsData.map(stop => {
@@ -121,7 +125,7 @@ function findThreeRoutes(Graph, maxArrivalTime, maxWalkingTime) {
     return result;
 }
 
-async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime, WalkingTime){
+export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime, WalkingTime){
     const src = new Location("Current Location","",srclat, srclon);
     const dst = new Location("Destination","",dstlat, dstlon);
     const srcNode = new Node(0, src);
@@ -203,7 +207,7 @@ async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime, Walkin
                 const walkMin = Math.round(res.walkingTime / 60);
         
                 // add the result to the graph
-                Graph.addEdge(itemA.station.id, itemB.station.id, transitMin, walkMin, res.distance);
+                Graph.addEdge(itemA.station.id, itemB.station.id, transitMin, walkMin, res.distance / 1000);
             }
         });
         edgePromises.push(promise);
@@ -223,7 +227,7 @@ async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime, Walkin
     printRouteSummary("Minimum Walking", results.minWalking);
     printRouteSummary("Fastest", results.fastest);
     printRouteSummary("Maximum Walking", results.maxWalkingWithinLimit);
-    
+    return results;
 }
 
 function printRouteSummary(title, route) {
@@ -250,4 +254,3 @@ function printRouteSummary(title, route) {
     Distance: ${dist.toFixed(2)}m
     =========================================`);
 }
-CalculatePath(40.7484, -73.9857, 40.7580, -73.9855, 40, 20);

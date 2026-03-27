@@ -5,6 +5,7 @@ import MapScreen from './screens/MapScreen';
 import RoutePlanningScreen from './screens/RoutePlanningScreen';
 import AccountScreen from './screens/AccountScreen';
 import ProgressScreen from './screens/ProgressScreen';
+import RouteResultsScreen from './screens/RouteResultsScreen';
 
 // Shared Icons
 
@@ -77,10 +78,14 @@ export function BottomNav({ active, onChange }) {
 // App Root
 
 export default function App() {
-  // 'map' || 'route' || 'account' || 'progress'
+  // 'map' || 'route' || 'route results' || 'account' || 'progress'
   const [screen, setScreen] = useState('map');
+  const [routeData, setRouteData] = useState(null);
 
-  const navigate = (destination) => setScreen(destination);
+  const navigate = (destination, data = null) => {
+    if (data) setRouteData(data);
+    setScreen(destination);
+  };
 
   return (
     <div className="app-shell">
@@ -88,6 +93,7 @@ export default function App() {
       {screen === 'route'    && <RoutePlanningScreen onNavigate={navigate} />}
       {screen === 'account'  && <AccountScreen onNavigate={navigate} />}
       {screen === 'progress' && <ProgressScreen onNavigate={navigate} />}
+      {screen === 'results' && <RouteResultsScreen onNavigate={navigate} routeData={routeData} />}
     </div>
   );
 }

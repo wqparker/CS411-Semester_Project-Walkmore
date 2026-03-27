@@ -5,8 +5,8 @@ import { TopBar, BottomNav } from '../App';
 
 export default function RoutePlanningScreen({ onNavigate }) {
   const [destination, setDestination] = useState('');
-  const [arrivalTime, setArrivalTime] = useState('18:22');
-  const [walkingMins, setWalkingMins] = useState('10');
+  const [arrivalTime, setArrivalTime] = useState('');
+  const [walkingMins, setWalkingMins] = useState('');
   const [optimization, setOptimization] = useState('balanced');
   const [errors, setErrors] = useState({});
 
@@ -39,15 +39,48 @@ export default function RoutePlanningScreen({ onNavigate }) {
     if (!walkingMins || isNaN(mins) || mins < 1 || mins > 120) {
       newErrors.walkingMins = 'Enter a walking time between 1 and 120 minutes';
     }
+    const arrival = parseInt(arrivalTime, 10);
+    if (!arrivalTime || isNaN(arrival) || arrival < 1 || arrival > 180) {
+      newErrors.arrivalTime = 'Enter minutes until arrival between 1 and 180';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (validate()) {
-      // TODO: send { destination, arrivalTime, walkingMins, optimization }
-      // to Express backend when route calculation API is ready
-      alert(`Route planned!\nTo: ${destination}\nArrival: ${arrivalTime}\nWalking: ${walkingMins} min\nMode: ${optimization}`);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+
+    setLoading(true);
+    setApiError('');
+
+    try {
+      const response = await fetch('/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination,
+          arrivalTime,
+          walkingMins,
+          optimization,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setApiError(data.error || 'Something went wrong.');
+        return;
+      }
+
+      onNavigate('results', { route: data.route, optimization, destination });
+
+    } catch (err) {
+      setApiError('Could not reach the server. Make sure the backend is running.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -104,12 +137,13 @@ export default function RoutePlanningScreen({ onNavigate }) {
 
           {/* Arrival Time */}
           <div className="form-group">
-            <label className="form-label">Desired Arrival Time</label>
+            <label className="form-label">Minutes Until Arrival</label>
             <div className="input-wrapper">
               <span className="input-icon-left"><ClockIcon /></span>
               <input
                 className="form-input has-left-icon has-right-icon"
-                type="time"
+                type="number"
+                placeholder="40"
                 value={arrivalTime}
                 onChange={(e) => {
                   setArrivalTime(e.target.value);
@@ -117,7 +151,9 @@ export default function RoutePlanningScreen({ onNavigate }) {
                 }}
                 style={errors.arrivalTime ? { borderColor: 'var(--red)' } : {}}
               />
-              <span className="input-icon-right"><InfoIcon /></span>
+              <span className="input-icon-right" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-mid)' }}>
+                min
+              </span>
             </div>
             {errors.arrivalTime && <p className="input-error">{errors.arrivalTime}</p>}
           </div>
@@ -224,10 +260,13 @@ export default function RoutePlanningScreen({ onNavigate }) {
             </div>
           </div>
 
+          {apiError && <p className="input-error" style={{ marginTop: 12 }}>{apiError}</p>}
+
           {/* Submit */}
-          <button className="btn-primary" onClick={handleSubmit}>
-            Find Routes
+          <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Finding Routes...' : 'Find Routes'}
           </button>
+        
 
         </div>
       </div>
