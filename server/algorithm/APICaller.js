@@ -67,7 +67,7 @@ async function getTransitRoute(srclat, srclon, dstlat, dstlon) {
     if (!response.ok) {
       const errorText = await response.text();
       console.log("error:", errorText);
-      return;
+      return null;
     }
 
     const data = await response.json();
@@ -94,4 +94,41 @@ async function getTransitRoute(srclat, srclon, dstlat, dstlon) {
   }
 }
 
-export { getWalkingRoute, getTransitRoute };
+async function getAddressFromCoord(input){
+    //Assumes the input is in coordinates
+    const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${input}&key=${apiKey}`;
+    try {
+      const response = await fetch(geoUrl);
+      const result = await response.json();
+      return result.results[0];
+    } catch (error) {
+      console.error('Geocoding Error:', error);
+      return;
+    }
+}
+
+async function getAddressFromName(input){
+  //Assumes inut is name or address
+  const placesUrl = 'https://places.googleapis.com/v1/places:searchText';
+    const data = { textQuery: input };
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.addressComponents'
+    };
+
+    try {
+      const response = await fetch(placesUrl, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      return result.places[0];
+    } catch (error) {
+      console.error('Places Error:', error);
+      return null;
+    }
+}
+export { getWalkingRoute, getTransitRoute , getAddressFromCoord, getAddressFromName};
