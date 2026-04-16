@@ -132,8 +132,9 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
     const srcNode = new Node(0, src);
     const dstNode = new Node(1,dst);
     const stations = buildStationMap();
-    const nearestFromSrc = getNearestStations(srcNode, stations, 20);
-    const nearestFromDst = getNearestStations(dstNode, stations, 20);
+    const calculatedRadius = 2 + (18 / Math.log(120)) * Math.log(WalkingTime);
+    const nearestFromSrc = getNearestStations(srcNode, stations, calculatedRadius);
+    const nearestFromDst = getNearestStations(dstNode, stations, calculatedRadius);
     const notoverlap = nearestFromDst.filter(itemB => 
         !nearestFromSrc.some(itemA => itemA.station.id === itemB.station.id)
     );
@@ -272,4 +273,4 @@ function printRouteSummary(title, route) {
     Distance: ${dist.toFixed(2)}km
     =========================================`);
 }
-CalculatePath(40.7684, -73.9857, 40.7686, -73.9855, 40, 20);
+//CalculatePath(40.7684, -73.9857, 40.7686, -73.9855, 40, 120);
