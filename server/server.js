@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { CalculatePath } from './algorithm/routePlanner.js';
-
+import { checkDestination } from './ValidateInput.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -28,7 +28,19 @@ async function geocodeDestination(address) {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'WalkMore backend is running!' });
 });
-
+app.post('/api/validate', async (req, res) => {
+  try{
+  const { input } = req.body;
+  const result = await checkDestination(input);
+  if(!result){
+    return res.status(404).json({ error: 'The server may be down.' });
+  }
+  res.json(result);
+  } catch(err){
+    console.error('Location validation error:', err);
+    res.status(500).json({ error: 'Internal server error during location validation.' });
+  }
+});
 app.post('/api/route', async (req, res) => {
   const { destination, arrivalTime, walkingMins, optimization } = req.body;
 
