@@ -83,4 +83,22 @@ app.post('/api/route', async (req, res) => {
   }
 });
 
+app.get('/api/autocomplete', async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.length < 2) return res.json({ suggestions: [] });
+
+  const apiKey = process.env.GOOGLE_API_KEY;
+  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(q)}&key=${apiKey}&components=country:us&location=40.7484,-73.9857&radius=50000`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    const suggestions = data.predictions.map(p => p.description);
+    res.json({ suggestions });
+  } catch (err) {
+    console.error('Autocomplete error:', err);
+    res.status(500).json({ suggestions: [] });
+  }
+});
+
 app.listen(5000, () => console.log('Server running on port 5000'));
