@@ -36,9 +36,37 @@ export default function RoutePlanningScreen({ onNavigate }) {
     },
   ];
 
-  const validate = () => {
+  const validate = async () => {
     const newErrors = {};
-    if (!destination.trim()) newErrors.destination = 'Please enter a destination';
+    if (!destination.trim()) {
+      newErrors.destination = 'Please enter a destination';
+    } else{
+       try {
+        const response = await fetch('/api/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          { input: destination }
+        ),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setApiError(data.error || 'Something went wrong.');
+        return;
+      }
+      if(data.code == 1){
+        newErrors.destination = 'The destination is outside service area';
+      }
+      if(data.code == 2){
+        newErrors.destination = 'The destination does not exist'
+      }
+
+    } catch (err) {
+      setApiError('Could not reach the server. Make sure the backend is running.');
+    } 
+    }
     if (!arrivalTime) newErrors.arrivalTime = 'Please set an arrival time';
     const mins = parseInt(walkingMins, 10);
     if (!walkingMins || isNaN(mins) || mins < 1 || mins > 120) {
@@ -62,7 +90,8 @@ export default function RoutePlanningScreen({ onNavigate }) {
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    const val = await validate();
+    if (!val) return;
 
     setLoading(true);
     setApiError('');
