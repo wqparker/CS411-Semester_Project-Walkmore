@@ -98,7 +98,13 @@ export default function AccountScreen({ onNavigate }) {
         return;
       }
 
-      login(googleUser, token);
+      login({
+        ...googleUser,
+        dob: form.birthday,
+        height_cm,
+        weight: parseFloat(form.weight),
+        units: form.units,
+      }, token);
       setSubmitted(true);
     } catch {
       setAuthError('Failed to save profile. Please try again.');
