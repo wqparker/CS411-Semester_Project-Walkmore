@@ -195,7 +195,6 @@ export default function AccountScreen({ onNavigate }) {
             </p>
           </div>
         </div>
-        <BottomNav active="map" onChange={onNavigate} />
       </>
     );
   }
@@ -323,7 +322,6 @@ export default function AccountScreen({ onNavigate }) {
           </button>
         </div>
       </div>
-      <BottomNav active="map" onChange={onNavigate} />
     </>
   );
 }
