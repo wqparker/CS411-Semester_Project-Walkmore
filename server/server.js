@@ -122,17 +122,22 @@ function authMiddleware(req, res, next) {
 
 // POST /api/auth/google
 // flow: 'login' | 'register'
+
 app.post('/api/auth/google', async (req, res) => {
   const { token, flow } = req.body;
   if (!token || !flow) return res.status(400).json({ error: 'Missing token or flow' });
 
   try {
-    // Verify token with Google
-    const ticket = await googleClient.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
+    // Use access token to get user info from Google
+    const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    const { sub: google_id, email, name, picture } = ticket.getPayload();
+
+    if (!googleRes.ok) {
+      return res.status(401).json({ error: 'Invalid Google token' });
+    }
+
+    const { sub: google_id, email, name, picture } = await googleRes.json();
 
     const db = await getDb();
     const users = db.collection('users');

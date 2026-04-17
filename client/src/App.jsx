@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { AuthProvider } from './context/AuthContext';
 import './App.css';
 
 import MapScreen from './screens/MapScreen';
@@ -6,6 +8,7 @@ import RoutePlanningScreen from './screens/RoutePlanningScreen';
 import AccountScreen from './screens/AccountScreen';
 import ProgressScreen from './screens/ProgressScreen';
 import RouteResultsScreen from './screens/RouteResultsScreen';
+import LandingScreen from './screens/LandingScreen';
 
 // Shared Icons
 
@@ -78,8 +81,8 @@ export function BottomNav({ active, onChange }) {
 // App Root
 
 export default function App() {
-  // 'map' || 'route' || 'route results' || 'account' || 'progress'
-  const [screen, setScreen] = useState('map');
+  // 'landing' || 'map' || 'route' || 'route results' || 'account' || 'progress'
+  const [screen, setScreen] = useState('landing');
   const [routeData, setRouteData] = useState(null);
 
   const navigate = (destination, data = null) => {
@@ -88,12 +91,17 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
-      {screen === 'map'      && <MapScreen onNavigate={navigate} />}
-      {screen === 'route'    && <RoutePlanningScreen onNavigate={navigate} />}
-      {screen === 'account'  && <AccountScreen onNavigate={navigate} />}
-      {screen === 'progress' && <ProgressScreen onNavigate={navigate} />}
-      {screen === 'results' && <RouteResultsScreen onNavigate={navigate} routeData={routeData} />}
-    </div>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <AuthProvider>
+        <div className="app-shell">
+          {screen === 'landing' && <LandingScreen onNavigate={navigate} />}
+          {screen === 'map' && <MapScreen onNavigate={navigate} />}
+          {screen === 'route' && <RoutePlanningScreen onNavigate={navigate} />}
+          {screen === 'account' && <AccountScreen onNavigate={navigate} />}
+          {screen === 'progress' && <ProgressScreen onNavigate={navigate} />}
+          {screen === 'results' && <RouteResultsScreen onNavigate={navigate} routeData={routeData} />}
+        </div>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }
