@@ -1,8 +1,10 @@
 import { useAuth } from '../context/AuthContext';
+import { useState } from 'react';
 import { TopBar, BottomNav } from '../App';
 
 export default function ProfileScreen({ onNavigate }) {
     const { user, token, logout } = useAuth();
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const handleSignOut = () => {
       logout();
@@ -33,9 +35,6 @@ export default function ProfileScreen({ onNavigate }) {
 
 
     const handleDeleteAccount = async () => {
-      const confirmed = window.confirm('Are you sure you want to delete your account? This cannot be undone.');
-      if (!confirmed) return;
-
       try {
         const res = await fetch('http://localhost:5000/api/auth/account', {
           method: 'DELETE',
@@ -122,20 +121,61 @@ export default function ProfileScreen({ onNavigate }) {
               Sign Out
             </button>
 
-            <button
-              onClick={handleDeleteAccount}
-              style={{
-                width: '100%', padding: '12px 0',
+            {!showConfirm ? (
+              <button
+                onClick={() => setShowConfirm(true)}
+                style={{
+                  width: '100%', padding: '12px 0',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none', background: '#ef4444', color: '#fff',
+                  fontFamily: 'inherit', fontSize: 15, fontWeight: 600,
+                  cursor: 'pointer', marginTop: 8,
+                }}
+              >
+                Delete Account
+              </button>
+            ) : (
+              <div style={{
+                marginTop: 8, padding: 16,
                 borderRadius: 'var(--radius-md)',
-                border: 'none',
-                background: '#ef4444', color: '#fff',
-                fontFamily: 'inherit', fontSize: 15, fontWeight: 600,
-                cursor: 'pointer', marginTop: 8,
-              }}
-            >
-              Delete Account
-            </button>
-          
+                border: '2px solid #ef4444',
+                background: '#fef2f2',
+              }}>
+                <p style={{ fontSize: 14, color: '#991b1b', fontWeight: 600, margin: '0 0 4px' }}>
+                  Delete Account
+                </p>
+                <p style={{ fontSize: 13, color: '#b91c1c', margin: '0 0 12px' }}>
+                  This cannot be undone. All your data will be permanently deleted.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    style={{
+                      flex: 1, padding: '10px 0',
+                      borderRadius: 'var(--radius-md)',
+                      border: '2px solid #d1d5db', background: '#fff',
+                      color: 'var(--text)', fontFamily: 'inherit',
+                      fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    style={{
+                      flex: 1, padding: '10px 0',
+                      borderRadius: 'var(--radius-md)',
+                      border: 'none', background: '#ef4444',
+                      color: '#fff', fontFamily: 'inherit',
+                      fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+              </div>
+            )}
+        
           </div>
         </div>
         <BottomNav active="map" onChange={onNavigate} />
