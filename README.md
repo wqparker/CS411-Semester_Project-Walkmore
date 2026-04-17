@@ -56,3 +56,11 @@ You should see:
 ```json
 { "message": "WalkMore backend is running!" }
 ```
+
+
+## Testing Suite
+The testing suite lives within the /server/ directory since it most effectively tests the actual functionality that lives in the backend and between API calls. In order to the run the testing suite, execute:
+```bash
+npm run test:coverage
+```
+The terminal should output each test and its passing status, as well as a breakdown of statement, branch, function, and line coverage. Note that the db.js file has very low coverage since we mock the database during tests so as to not require a live DB Atlas instance. 
