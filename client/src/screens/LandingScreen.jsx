@@ -4,25 +4,9 @@ import { useAuth } from '../context/AuthContext';
 export default function LandingScreen({ onNavigate }) {
   const { login } = useAuth();
 
-  const handleGoogle = useGoogleLogin({
+  const handleSignIn = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      // Exchange access token for id token via userinfo endpoint
-      const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-      }).then(r => r.json());
-
-      return userInfo;
-    },
-    onError: () => alert('Google sign in failed'),
-  });
-
-  const handleSignIn = async () => {
-    handleGoogle({
-      onSuccess: async (tokenResponse) => {
-        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        }).then(r => r.json());
-
+      try {
         const res = await fetch('http://localhost:5000/api/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -30,19 +14,20 @@ export default function LandingScreen({ onNavigate }) {
         });
 
         const data = await res.json();
+
         if (!res.ok) {
           alert(data.error);
           return;
         }
+
         login(data.user, data.token);
         onNavigate('map');
-      },
-    });
-  };
-
-  const handleRegister = () => {
-    onNavigate('account');
-  };
+      } catch {
+        alert('Something went wrong. Please try again.');
+      }
+    },
+    onError: () => alert('Google sign in failed'),
+  });
 
   return (
     <div style={{
@@ -64,13 +49,12 @@ export default function LandingScreen({ onNavigate }) {
         </p>
       </div>
 
-      {/* Buttons */}
-      <button className="btn-primary" style={{ width: '100%' }} onClick={handleRegister}>
+      <button className="btn-primary" style={{ width: '100%' }} onClick={() => onNavigate('account')}>
         Create Account
       </button>
 
       <button
-        onClick={handleSignIn}
+        onClick={() => handleSignIn()}
         style={{
           width: '100%', padding: '12px 0',
           borderRadius: 'var(--radius-md)',
