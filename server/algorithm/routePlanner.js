@@ -49,7 +49,7 @@ function buildStationMap() {
     // Create Node from id and Location
     stationMap.set(stop.id, new Node(stop.id, loc));
   });
-  console.log(`${allNodes.length} Nodes created.`);
+  //console.log(`${allNodes.length} Nodes created.`);
   return stationMap;
 }
 function getNearestStations(point, stations, topK = 20) {
@@ -103,7 +103,7 @@ function findThreeRoutes(Graph, maxArrivalTime, maxWalkingTime) {
         const neighbors = Graph.getNextStops(curr); 
         for (const neighbor of neighbors) {
             // cycle safeguard, although would not have one
-            if (path.includes(neighbor.nodeId)) continue;
+            if (path.includes(neighbor.nodeId)) continue; 
 
             queue.push([
                 neighbor.nodeId,
@@ -241,12 +241,17 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
     //Graph.displayGraph();
 
     const results = findThreeRoutes(Graph,ArrivalTime, WalkingTime);
-
+    const temp = {
+        minWalking: getCoordsForPath(results.minWalking, Graph),
+        fastest: getCoordsForPath(results.fastest, Graph),
+        maxWalkingWithinLimit: getCoordsForPath(results.maxWalkingWithinLimit, Graph)
+    }
     console.log("Routes:");
-    printRouteSummary("Minimum Walking", results.minWalking);
-    printRouteSummary("Fastest", results.fastest);
-    printRouteSummary("Maximum Walking", results.maxWalkingWithinLimit);
-    return results;
+    //printRouteSummary("Minimum Walking", test);
+    // printRouteSummary("Minimum Walking", results.minWalking);
+    // printRouteSummary("Fastest", results.fastest);
+    // printRouteSummary("Maximum Walking", results.maxWalkingWithinLimit);
+    return temp;
 }
 
 function printRouteSummary(title, route) {
@@ -273,4 +278,33 @@ function printRouteSummary(title, route) {
     Distance: ${dist.toFixed(2)}km
     =========================================`);
 }
+
+function getCoordsForPath(route, Graph){
+    if (!route || !route.path) {
+        console.warn("유효하지 않은 경로 객체입니다.");
+        return null;
+    }
+
+    const { path, totalT, walkT, dist} = route;
+
+    // 노드 ID 배열을 순회하며 [위도, 경도] 배열로 변환
+    const coordinatePath = path.map(nodeId => {
+        const node = Graph.nodes[nodeId];
+        if (!node || !node.Location) {
+            console.warn(`node does not exist.`);
+            return null;
+        }
+
+        // Location 클래스 내부의 lat, lon 추출
+        return [node.Location.lat, node.Location.lon];
+    }).filter(coord => coord !== null); 
+    // 
+    const namePath = route.path.map(nodeId => Graph.nodes[nodeId].Location.name);
+    return {
+        ...route,
+        path: namePath,
+        coords: coordinatePath // [ [lat, lon], [lat, lon], ... ]
+    };
+}
+
 //CalculatePath(40.7684, -73.9857, 40.7686, -73.9855, 40, 120);
