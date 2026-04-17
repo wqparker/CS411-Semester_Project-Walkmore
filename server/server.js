@@ -219,4 +219,8 @@ app.delete('/api/auth/account', authMiddleware, async (req, res) => {
   }
 });
 
-app.listen(5000, () => console.log('Server running on port 5000'));
+export default app;
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(5000, () => console.log('Server running on port 5000'));
+}
