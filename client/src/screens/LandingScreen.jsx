@@ -16,6 +16,7 @@ export default function LandingScreen({ onNavigate }) {
         });
 
         const data = await res.json();
+        console.log('Login response:', data);
 
         if (!res.ok) {
           setError(data.error);

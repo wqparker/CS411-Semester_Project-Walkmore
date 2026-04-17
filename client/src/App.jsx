@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from './context/AuthContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
@@ -9,6 +10,7 @@ import AccountScreen from './screens/AccountScreen';
 import ProgressScreen from './screens/ProgressScreen';
 import RouteResultsScreen from './screens/RouteResultsScreen';
 import LandingScreen from './screens/LandingScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
 // Shared Icons
 
@@ -80,8 +82,8 @@ export function BottomNav({ active, onChange }) {
 
 // App Root
 
-export default function App() {
-  // 'landing' || 'map' || 'route' || 'route results' || 'account' || 'progress'
+function AppContent() {
+  const { user } = useAuth();
   const [screen, setScreen] = useState('landing');
   const [routeData, setRouteData] = useState(null);
 
@@ -90,17 +92,32 @@ export default function App() {
     setScreen(destination);
   };
 
+  const handleAvatarClick = () => {
+    if (user) {
+      navigate('profile');
+    } else {
+      navigate('account');
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      {screen === 'landing'  && <LandingScreen onNavigate={navigate} />}
+      {screen === 'map'      && <MapScreen onNavigate={navigate} onAvatarClick={handleAvatarClick} />}
+      {screen === 'route'    && <RoutePlanningScreen onNavigate={navigate} />}
+      {screen === 'account'  && <AccountScreen onNavigate={navigate} />}
+      {screen === 'profile'  && <ProfileScreen onNavigate={navigate} />}
+      {screen === 'progress' && <ProgressScreen onNavigate={navigate} />}
+      {screen === 'results'  && <RouteResultsScreen onNavigate={navigate} routeData={routeData} />}
+    </div>
+  );
+}
+
+export default function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
-        <div className="app-shell">
-          {screen === 'landing' && <LandingScreen onNavigate={navigate} />}
-          {screen === 'map' && <MapScreen onNavigate={navigate} />}
-          {screen === 'route' && <RoutePlanningScreen onNavigate={navigate} />}
-          {screen === 'account' && <AccountScreen onNavigate={navigate} />}
-          {screen === 'progress' && <ProgressScreen onNavigate={navigate} />}
-          {screen === 'results' && <RouteResultsScreen onNavigate={navigate} routeData={routeData} />}
-        </div>
+        <AppContent />
       </AuthProvider>
     </GoogleOAuthProvider>
   );

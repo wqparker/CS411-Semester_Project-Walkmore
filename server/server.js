@@ -207,4 +207,16 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
   }
 });
 
+// DELETE /api/auth/account
+app.delete('/api/auth/account', authMiddleware, async (req, res) => {
+  try {
+    const db = await getDb();
+    await db.collection('users').deleteOne({ google_id: req.user.google_id });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
 app.listen(5000, () => console.log('Server running on port 5000'));

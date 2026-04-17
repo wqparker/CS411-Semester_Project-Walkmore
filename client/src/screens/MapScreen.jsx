@@ -50,13 +50,13 @@ function RecenterMap({ position }) {
 }
 
 // MapScreen 
-export default function MapScreen({ onNavigate }) {
+export default function MapScreen({ onNavigate, onAvatarClick }) {
   // Mock user position — will be replaced with real GPS later
   const userPosition = [40.7484, -73.9857]; // Empire State Building
 
   return (
     <>
-      <TopBar onAvatarClick={() => onNavigate('account')} />
+      <TopBar onAvatarClick={onAvatarClick} />
 
       <div className="screen-content" style={{ position: 'relative' }}>
 
