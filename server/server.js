@@ -3,6 +3,13 @@ import express from 'express';
 import cors from 'cors';
 import { CalculatePath } from './algorithm/routePlanner.js';
 import { checkDestination } from './ValidateInput.js';
+
+import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
+import { getDb } from './db.js';
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -98,6 +105,100 @@ app.get('/api/autocomplete', async (req, res) => {
   } catch (err) {
     console.error('Autocomplete error:', err);
     res.status(500).json({ suggestions: [] });
+  }
+});
+
+// Middleware to verify JWT on protected routes
+function authMiddleware(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// POST /api/auth/google
+// flow: 'login' | 'register'
+app.post('/api/auth/google', async (req, res) => {
+  const { token, flow } = req.body;
+  if (!token || !flow) return res.status(400).json({ error: 'Missing token or flow' });
+
+  try {
+    // Verify token with Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { sub: google_id, email, name, picture } = ticket.getPayload();
+
+    const db = await getDb();
+    const users = db.collection('users');
+    const existingUser = await users.findOne({ google_id });
+
+    if (flow === 'login') {
+      if (!existingUser) {
+        return res.status(404).json({ error: 'No account found. Please create an account first.' });
+      }
+      if (!existingUser.profile_complete) {
+        return res.status(403).json({ error: 'Account setup incomplete. Please create an account first.' });
+      }
+      const jwtToken = jwt.sign({ google_id, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      return res.json({ token: jwtToken, user: existingUser });
+    }
+
+    if (flow === 'register') {
+      if (existingUser && existingUser.profile_complete) {
+        return res.status(409).json({ error: 'Account already exists. Please sign in instead.' });
+      }
+      // Create or update incomplete user
+      if (!existingUser) {
+        await users.insertOne({
+          google_id, email, name, picture,
+          profile_complete: false,
+          created_at: new Date(),
+        });
+      }
+      const jwtToken = jwt.sign({ google_id, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      return res.json({ token: jwtToken, google_id, email, name, picture });
+    }
+
+  } catch (err) {
+    console.error('Google auth error:', err);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
+// PUT /api/auth/profile - complete profile after Google registration
+app.put('/api/auth/profile', authMiddleware, async (req, res) => {
+  const { dob, height_cm, weight, units } = req.body;
+  if (!dob || !height_cm || !weight || !units) {
+    return res.status(400).json({ error: 'Missing required profile fields' });
+  }
+  try {
+    const db = await getDb();
+    await db.collection('users').updateOne(
+      { google_id: req.user.google_id },
+      { $set: { dob, height_cm, weight, units, profile_complete: true } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// GET /api/auth/me
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const db = await getDb();
+    const user = await db.collection('users').findOne({ google_id: req.user.google_id });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
 
