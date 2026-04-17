@@ -171,7 +171,7 @@ export default function AccountScreen({ onNavigate }) {
               style={{
                 width: '100%', padding: '12px 0',
                 borderRadius: 'var(--radius-md)',
-                border: '2px solid var(--border)',
+                border: '2px solid #d1d5db',
                 background: 'var(--bg)', color: 'var(--text)',
                 fontFamily: 'inherit', fontSize: 15, fontWeight: 600,
                 cursor: 'pointer', display: 'flex',

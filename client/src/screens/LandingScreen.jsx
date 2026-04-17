@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 
 export default function LandingScreen({ onNavigate }) {
   const { login } = useAuth();
+  const [error, setError] = useState('');
 
   const handleSignIn = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -16,17 +18,17 @@ export default function LandingScreen({ onNavigate }) {
         const data = await res.json();
 
         if (!res.ok) {
-          alert(data.error);
+          setError(data.error);
           return;
         }
 
         login(data.user, data.token);
         onNavigate('map');
       } catch {
-        alert('Something went wrong. Please try again.');
+        setError('Something went wrong. Please try again.');
       }
     },
-    onError: () => alert('Google sign in failed'),
+    onError: () => setError('Google sign in failed'),
   });
 
   return (
@@ -35,7 +37,6 @@ export default function LandingScreen({ onNavigate }) {
       justifyContent: 'center', height: '100vh', padding: '0 32px',
       background: 'var(--bg)', gap: 16,
     }}>
-      {/* Logo */}
       <div style={{ marginBottom: 24, textAlign: 'center' }}>
         <div style={{
           width: 64, height: 64, borderRadius: 16,
@@ -49,6 +50,12 @@ export default function LandingScreen({ onNavigate }) {
         </p>
       </div>
 
+      {error && (
+        <p style={{ color: 'var(--red)', fontSize: 13, textAlign: 'center', margin: '0 0 8px' }}>
+          {error}
+        </p>
+      )}
+
       <button className="btn-primary" style={{ width: '100%' }} onClick={() => onNavigate('account')}>
         Create Account
       </button>
@@ -58,7 +65,7 @@ export default function LandingScreen({ onNavigate }) {
         style={{
           width: '100%', padding: '12px 0',
           borderRadius: 'var(--radius-md)',
-          border: '2px solid var(--border)',
+          border: '2px solid #d1d5db',
           background: 'var(--bg)', color: 'var(--text)',
           fontFamily: 'inherit', fontSize: 15, fontWeight: 600,
           cursor: 'pointer', display: 'flex',
