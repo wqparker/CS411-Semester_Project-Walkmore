@@ -281,13 +281,13 @@ function printRouteSummary(title, route) {
 
 function getCoordsForPath(route, Graph){
     if (!route || !route.path) {
-        console.warn("유효하지 않은 경로 객체입니다.");
+        console.warn("route does not exist.");
         return null;
     }
 
     const { path, totalT, walkT, dist} = route;
 
-    // 노드 ID 배열을 순회하며 [위도, 경도] 배열로 변환
+    // iterate path to acquire stop id
     const coordinatePath = path.map(nodeId => {
         const node = Graph.nodes[nodeId];
         if (!node || !node.Location) {
@@ -295,10 +295,10 @@ function getCoordsForPath(route, Graph){
             return null;
         }
 
-        // Location 클래스 내부의 lat, lon 추출
+        // Extract location info
         return [node.Location.lat, node.Location.lon];
     }).filter(coord => coord !== null); 
-    // 
+    // change path display to name
     const namePath = route.path.map(nodeId => Graph.nodes[nodeId].Location.name);
     return {
         ...route,
