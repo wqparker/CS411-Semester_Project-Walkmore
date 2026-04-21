@@ -4,7 +4,8 @@ import { dirname, join } from 'path';
 import { Node } from '../Graph/GraphNode.js';
 import {Location} from '../Graph/Location.js';
 import {TransitGraph} from '../Graph/Graph.js';
-import {getWalkingRoute, getTransitRoute} from './APICaller.js';
+import {getWalkingRoute, getTransitRoute, getWalkingNavigationRoute, getTransitNavigationRoute} from './APICaller.js';
+import polyline from '@mapbox/polyline';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const EARTH_RADIUS_METERS = 6371000;
@@ -246,37 +247,12 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
         fastest: getCoordsForPath(results.fastest, Graph),
         maxWalkingWithinLimit: getCoordsForPath(results.maxWalkingWithinLimit, Graph)
     }
-    console.log("Routes:");
+    //console.log(JSON.stringify(await Navigate(temp.fastest))); 
     //printRouteSummary("Minimum Walking", test);
     // printRouteSummary("Minimum Walking", results.minWalking);
     // printRouteSummary("Fastest", results.fastest);
     // printRouteSummary("Maximum Walking", results.maxWalkingWithinLimit);
     return temp;
-}
-
-function printRouteSummary(title, route) {
-    if (!route) {
-        console.log(`[${title}] Can not find a path.`);
-        return;
-    }
-
-    const { path, totalT, walkT, dist } = route;
-    
-    // Mark transit stops
-    const pathString = path.join(" ➔ ");
-    
-    // Calculating percentage of walking
-    const walkPercentage = ((walkT / totalT) * 100).toFixed(1);
-
-    console.log(`
-    =========================================
-    ${title}
-    -----------------------------------------
-    Path: ${pathString}
-    Estimated time: ${totalT}min
-    Estimated Walking Time: ${walkT}min (${walkPercentage}%)
-    Distance: ${dist.toFixed(2)}km
-    =========================================`);
 }
 
 function getCoordsForPath(route, Graph){
@@ -307,4 +283,102 @@ function getCoordsForPath(route, Graph){
     };
 }
 
+async function getNavigationRoute(route){
+    //takes in a route object, returns a navigatable route in google routes format
+    if (!route || !route.coords) {
+        console.log(`Can not find a path.`);
+        return;
+    }
+    const { path, totalT, walkT, dist , coords} = route;
+    let combinedCoordinates = [];
+    let TransitSegment = [];
+    try {
+        // Iterate path to get navigatable route for selected route
+        for (let i = 0; i < path.length - 1; i++) {
+            const [srclat,srclon] = coords[i];
+            const [dstlat, dstlon] = coords[i + 1];
+            
+            let encodedPolyline = "";
+            
+            if (i==1) {
+                // if transit route
+                const res = await getTransitNavigationRoute(srclat, srclon, dstlat, dstlon);
+                encodedPolyline = res?.NavigationRoute;
+                if (res?.TransitSegment) {
+                    TransitSegment.push(...res.TransitSegment);
+                }
+            } else {
+                // is walking route
+                const res = await getWalkingNavigationRoute(srclat, srclon, dstlat, dstlon);
+                encodedPolyline = res?.NavigationRoute;
+            }
+
+            if (!encodedPolyline) continue;
+
+            // decode the returned polyline
+            const decoded = polyline.decode(encodedPolyline);
+
+            if (combinedCoordinates.length === 0) {
+                combinedCoordinates.push(...decoded);
+            } else {
+                combinedCoordinates.push(...decoded.slice(1));
+            }
+        }
+
+        const finalEncodedPolyline = polyline.encode(combinedCoordinates);
+        return {
+            ...route,
+            NavigationRoute: finalEncodedPolyline, // Google route object
+            TransitSegment: TransitSegment
+        };
+
+    } catch (e) {
+        console.error("Error fetching navigation route:", e);
+        return null;
+    }
+}
+
+function convertToOsmGeoJSON(encodedPolyline, TransitSegment) {
+    // decode the google route
+    const decodedCoords = polyline.decode(encodedPolyline);
+
+    // convert to OSM format, which requires switching orders of lat and long
+    const osmCoords = decodedCoords.map(([lat, lng]) => [lng, lat]);
+
+    // encode it as GeoJSON format
+    const geojson = {
+        "type": "Feature",
+        "geometry": {
+            "type": "LineString",
+            "coordinates": osmCoords
+        },
+        "properties": {
+            "source": "Google Routes API",
+            "usage": "OSM Navigation",
+            "fullTransitInfo": TransitSegment
+        }
+    };
+
+    return geojson;
+}
+
+export async function Navigate(route){
+    //Call this function with selected user route from the frontend to acquire navigatable path
+    try {
+        const nav = await getNavigationRoute(route);
+
+        if (!nav || !nav.NavigationRoute) {
+            console.error("Cannot navigate.");
+            return null;
+        }
+
+        //Wrap the navigation route to Open Street Map compatible format
+        const osmData = convertToOsmGeoJSON(nav.NavigationRoute, nav.TransitSegment);
+        
+        return osmData;
+    } catch (error) {
+        console.error("Navigate error:", error);
+        return null;
+    }
+}
 //CalculatePath(40.7684, -73.9857, 40.7686, -73.9855, 40, 120);
