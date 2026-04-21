@@ -25,7 +25,7 @@ export default function RouteResultsScreen({ onNavigate, routeData }) {
 
   return (
     <>
-      <TopBar onAvatarClick={() => onNavigate('account')} />
+      <TopBar onAvatarClick={() => onNavigate('profile')} />
 
       <div className="screen-content">
         <div style={{ padding: '22px 20px 40px' }}>

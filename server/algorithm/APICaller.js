@@ -131,4 +131,101 @@ async function getAddressFromName(input){
       return null;
     }
 }
-export { getWalkingRoute, getTransitRoute , getAddressFromCoord, getAddressFromName};
+
+async function getTransitNavigationRoute(srclat, srclon, dstlat, dstlon) {
+  //returns shortest walking distance between two location
+  //Expects four inputs, latitude and longitude of origin, followed by latitude and longitude of destination
+  const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.steps.transitDetails,routes.legs.steps.travelMode'
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: srclat, longitude: srclon } } },
+        destination: { location: { latLng: { latitude: dstlat, longitude: dstlon} } },
+        travelMode: "TRANSIT",
+        transitPreferences: { allowedTravelModes: ["BUS","SUBWAY"]} //Modify this field to add / delete mode of transit
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log("error:", errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const route = data.routes[0]
+    const steps = route.legs[0].steps;
+
+    //extract transit info
+    let transitSegments = [];
+    steps.forEach(step => {
+      if (step.travelMode === "TRANSIT" && step.transitDetails) {
+        const details = step.transitDetails;
+        transitSegments.push({
+          lineName: details.transitLine.name || details.transitLine.shortName,
+          departureStop: details.stopDetails.departureStop.name, 
+          arrivalStop: details.stopDetails.arrivalStop.name,     
+          stopCount: details.stopCount, 
+          vehicleType: details.transitLine.vehicle.type, // BUS, SUBWAY
+          deplat: details.stopDetails.departureStop.location.latLng.latitude,
+          deplon: details.stopDetails.departureStop.location.latLng.longitude,
+          arrlat: details.stopDetails.arrivalStop.location.latLng.latitude,
+          arrlon: details.stopDetails.arrivalStop.location.latLng.longitude,
+        });
+      }
+    });
+
+    return {
+      NavigationRoute: route.polyline.encodedPolyline,
+      TransitSegment: transitSegments 
+    };
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function getWalkingNavigationRoute(srclat, srclon, dstlat, dstlon) {
+  //returns shortest walking distance between two location
+  //Expects four inputs, latitude and longitude of origin, followed by latitude and longitude of destination
+  const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline'
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: { latitude: srclat, longitude: srclon } } },
+        destination: { location: { latLng: { latitude: dstlat, longitude: dstlon} } },
+        travelMode: "WALK",
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log("error:", errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const route = data.routes[0]
+
+    return {
+      NavigationRoute: route.polyline.encodedPolyline, 
+      TransitSegment: null
+    };
+  } catch (e) {
+    console.error(e);
+  }
+}
+export { getWalkingRoute, getTransitRoute , getAddressFromCoord, getAddressFromName, getTransitNavigationRoute, getWalkingNavigationRoute};
