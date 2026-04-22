@@ -64,3 +64,18 @@ The testing suite lives within the /server/ directory since it most effectively 
 npm run test:coverage
 ```
 The terminal should output each test and its passing status, as well as a breakdown of statement, branch, function, and line coverage. Note that the db.js file has very low coverage since we mock the database during tests so as to not require a live DB Atlas instance. 
+
+### Using mock route data to save API credits
+Since using the API is so intensive with our algorithm, using a set of mock data for a route is fairly reasonable here. The file:
+```bash
+./server/mockRoute.js 
+```
+holds such a set for a route calculation call from Empire State Building NYC to Times Square NYC, 40 minutes arrival time, and 10 minutes walking time. To adequetly use this mock data as opposed to calling the APIs, go to
+```bash
+./server/.env
+```
+and add the line
+```
+USE_MOCK=true
+```
+and the system will bypass proper functionality to instead use this past system-calculated data that is reusable. Set the flag to "false" to switch back to regular system function.
