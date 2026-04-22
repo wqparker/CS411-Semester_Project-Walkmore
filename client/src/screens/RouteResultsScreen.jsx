@@ -23,6 +23,25 @@ export default function RouteResultsScreen({ onNavigate, routeData }) {
     ? ((route.walkT / route.totalT) * 100).toFixed(1)
     : 0;
 
+  const StartNavigation = async () => {
+    if (!route) return;
+    try {
+      //call navigate from the server
+      const response = await fetch('/api/navigate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ route: route }) 
+      });
+
+      const geojsonData = await response.json();
+
+      // navigate back to map page carrying the data
+      onNavigate('map', { routeData: geojsonData });
+
+    } catch (error) {
+      console.error("Failed to fetch navigation route:", error);
+    } 
+  };
   return (
     <>
       <TopBar onAvatarClick={() => onNavigate('profile')} />
@@ -174,7 +193,7 @@ export default function RouteResultsScreen({ onNavigate, routeData }) {
               </div>
 
               {/* Navigate button */}
-              <button className="btn-primary" onClick={() => onNavigate('map')}>
+              <button className="btn-primary" onClick={StartNavigation}>
                 Start Navigation
               </button>
             </>
@@ -211,3 +230,4 @@ function BackIcon() {
     </svg>
   );
 }
+

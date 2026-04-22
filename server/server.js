@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { CalculatePath } from './algorithm/routePlanner.js';
+import { CalculatePath, Navigate } from './algorithm/routePlanner.js';
 import { checkDestination } from './ValidateInput.js';
 
 import jwt from 'jsonwebtoken';
@@ -59,7 +59,6 @@ app.post('/api/route', async (req, res) => {
   if (!coords) {
     return res.status(400).json({ error: 'Could not find destination. Please try a different address.' });
   }
-
   try {
     const routes = await CalculatePath(
       HARDCODED_SRC_LAT,
@@ -108,6 +107,21 @@ app.get('/api/autocomplete', async (req, res) => {
   }
 });
 
+app.post('/api/navigate', async (req, res)=> {
+  try{
+    const {route} = req.body;
+    if(!route){
+      return res.status(400).json({ error: 'route does not exist. Please provide valid route'});
+    }
+    const result = await Navigate(route);
+    if (!result) {
+      return res.status(500).json({ error: 'Failed to generate navigation data' });
+    }
+    res.json(result);
+  } catch{
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 // Middleware to verify JWT on protected routes
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];

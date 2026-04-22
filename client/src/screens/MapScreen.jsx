@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useState, useRef, Fragment } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TopBar, BottomNav } from '../App';
@@ -251,14 +251,26 @@ function DemoPanel() {
 }
 
 // MapScreen 
-export default function MapScreen({ onNavigate, onAvatarClick }) {
+export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
   // Mock user position being replaced now
   const { position, rawPosition, accuracy, error, loading, demoMode, permissionState, requestLocation, setMockPosition, devModeEnabled } = useLocation();
   const mapRef = useRef(null);
+  const geoJson = routeData?.routeData;
+  const transitStops = geoJson?.properties?.fullTransitInfo || [];
   const handleRecenter = () => {
     if (mapRef.current) mapRef.current.setView(position, 14);
   };
-
+  //fit the map to route size
+  function FitRouteBounds({ data }) {
+    const map = useMap();
+    useEffect(() => {
+      if (data) {
+        const layer = L.geoJSON(data);
+        map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+      }
+    }, [data, map]);
+    return null;
+  }
   return (
     <>
       <TopBar onAvatarClick={onAvatarClick} />
@@ -403,6 +415,47 @@ export default function MapScreen({ onNavigate, onAvatarClick }) {
                 : `You are here${accuracy ? `\n±${Math.round(accuracy)}m` : ''}`}
             </Popup>
           </Marker>
+        {/* Drawing the navigation path */}
+        {geoJson && (
+            <>
+              <GeoJSON 
+                data={geoJson} 
+                style={{ color: '#2563EB', weight: 6, opacity: 0.8 }} 
+              />
+              <FitRouteBounds data={geoJson} />
+            </>
+          )}
+        {/* Identify transit stops */}
+        {transitStops.map((segment, idx) => (
+          <React.Fragment key={idx}>
+            {/* Departure */}
+            <Marker 
+              position={[segment.deplat, segment.deplon]} 
+              icon={stopIcon}
+            >
+              <Popup>
+                <div style={{ fontSize: '13px' }}>
+                <strong style={{ color: '#000000' }}>{segment.lineName} </strong><br/>
+                <b>Departure:</b> {segment.departureStop}<br/>
+                </div>
+              </Popup>
+            </Marker>
+
+            {/* Arrival */}
+            <Marker 
+              position={[segment.arrlat, segment.arrlon]} 
+              icon={stopIcon}
+            >
+              <Popup>
+                <div style={{ fontSize: '13px' }}>
+                <strong style={{ color: '#000000' }}>{segment.lineName} </strong><br/>
+                <b>Arrival:</b> {segment.arrivalStop}<br/>
+                <small>{segment.stopCount} stops</small>
+                </div>
+              </Popup>
+            </Marker>
+          </React.Fragment>
+        ))}
         </MapContainer>
 
         {/* Demo Panel */}
@@ -470,3 +523,18 @@ function RecenterIcon() {
     </svg>
   );
 }
+const stopIcon = L.divIcon({
+  className: '', 
+  html: `
+    <div style="
+      width: 14px; 
+      height: 14px;
+      border-radius: 50%;
+      background-color: #EF4444; 
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    "></div>
+  `,
+  iconSize: [14, 14], 
+  iconAnchor: [7, 7],
+});

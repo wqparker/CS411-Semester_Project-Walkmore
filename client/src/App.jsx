@@ -104,7 +104,7 @@ function AppContent() {
   return (
     <div className="app-shell">
       {screen === 'landing'  && <LandingScreen onNavigate={navigate} />}
-      {screen === 'map'      && <MapScreen onNavigate={navigate} onAvatarClick={handleAvatarClick} />}
+      {screen === 'map'      && <MapScreen onNavigate={navigate} onAvatarClick={handleAvatarClick} routeData={routeData}/>}
       {screen === 'route'    && <RoutePlanningScreen onNavigate={navigate} />}
       {screen === 'account'  && <AccountScreen onNavigate={navigate} />}
       {screen === 'profile'  && <ProfileScreen onNavigate={navigate} />}
