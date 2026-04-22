@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { LocationProvider } from './context/LocationContext';
+import { useLocation } from './context/LocationContext';
 import './App.css';
 
 import MapScreen from './screens/MapScreen';
@@ -45,12 +46,30 @@ export function UserIcon() {
 // Shared TopBar 
 
 export function TopBar({ onAvatarClick }) {
+  const { demoMode } = useLocation();
   return (
     <div className="top-bar">
       <div className="logo">
         <div className="logo-icon">✓</div>
         WalkMore
       </div>
+      {demoMode && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#EA580C',
+          background: '#FFF7ED',
+          border: '1px solid #FDBA74',
+          borderRadius: 20,
+          padding: '3px 10px',
+          whiteSpace: 'nowrap',
+        }}>
+          🟠 Demo
+        </div>
+      )}
       <button className="avatar-btn" onClick={onAvatarClick} aria-label="Account">
         <UserIcon />
       </button>
@@ -89,7 +108,7 @@ function AppContent() {
   const [routeData, setRouteData] = useState(null);
 
   const navigate = (destination, data = null) => {
-    if (data) setRouteData(data);
+    setRouteData(data); // changing to always cleaning data
     setScreen(destination);
   };
 

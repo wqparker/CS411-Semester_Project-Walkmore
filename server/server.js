@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { CalculatePath, Navigate } from './algorithm/routePlanner.js';
 import { checkDestination } from './ValidateInput.js';
+import { mockRoutes, mockGeoJSON } from './mockRoute.js';
 
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
@@ -53,6 +54,11 @@ app.post('/api/route', async (req, res) => {
 
   if (!destination || !arrivalTime || !walkingMins || !optimization) {
     return res.status(400).json({ error: 'Missing required fields.' });
+  }
+
+  if (process.env.USE_MOCK === 'true') {
+    const routeMap = { time: mockRoutes.fastest, walking: mockRoutes.maxWalkingWithinLimit, balanced: mockRoutes.minWalking };
+    return res.json({ route: routeMap[optimization], allRoutes: mockRoutes });
   }
 
   const coords = await geocodeDestination(destination);
@@ -112,6 +118,9 @@ app.post('/api/navigate', async (req, res)=> {
     const {route} = req.body;
     if(!route){
       return res.status(400).json({ error: 'route does not exist. Please provide valid route'});
+    }
+    if (process.env.USE_MOCK === 'true') {
+      return res.json(mockGeoJSON);
     }
     const result = await Navigate(route);
     if (!result) {

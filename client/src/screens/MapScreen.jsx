@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useRef, Fragment } from 'react';
+import React, { useEffect, useState, useRef, Fragment, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TopBar, BottomNav } from '../App';
 import { useLocation } from '../context/LocationContext';
+
+// file is getting large, **MARKED FOR REFACTORING**
 
 // Fix Leaflet's default marker icon broken by bundlers 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -80,6 +82,56 @@ function MapController({ mapRef }) {
   return null;
 }
 
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function buildDirections(route, transitStops) {
+  if (!route?.path || !route?.coords) return [];
+  const { path, coords } = route;
+  const dirs = [];
+
+  for (let i = 0; i < path.length - 1; i++) {
+    const toName = path[i + 1];
+    const toCoord = coords[i + 1];
+
+    if (i === 1 && transitStops.length > 0) {
+      const seg = transitStops[0];
+      dirs.push({
+        type: 'transit',
+        instruction: `Board ${seg.lineName}`,
+        subtext: `${seg.departureStop} → ${seg.arrivalStop} · ${seg.stopCount} stop${seg.stopCount !== 1 ? 's' : ''}`,
+        icon: seg.vehicleType === 'SUBWAY' ? '🚇' : '🚌',
+        targetCoord: toCoord,
+      });
+    } else {
+      dirs.push({
+        type: 'walk',
+        instruction: i === path.length - 2 ? 'Walk to your destination' : `Walk to ${toName}`,
+        subtext: toName,
+        icon: '🚶',
+        targetCoord: toCoord,
+      });
+    }
+  }
+
+  dirs.push({
+    type: 'arrive',
+    instruction: 'You have arrived!',
+    subtext: path[path.length - 1],
+    icon: '🎯',
+    targetCoord: null,
+  });
+
+  return dirs;
+}
+
 // Demo Panel 
 // Floating overlay for manually setting location during demos/presentations.
  
@@ -92,7 +144,7 @@ const NYC_PRESETS = [
   { label: 'Brooklyn Br.',  lat: 40.7061,  lon: -73.9969 },
 ];
  
-function DemoPanel() {
+function DemoPanel({ routeCoords, directions, currentStepIndex }) {
   const { position, demoMode, setMockPosition, clearMockPosition } = useLocation();
   const [open, setOpen]    = useState(false);
   const [latInput, setLat] = useState('');
@@ -161,6 +213,49 @@ function DemoPanel() {
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mid)' }}>Dev Mode</span>
             )}
           </div>
+          
+          {/* show route next waypoint for easy location moving along route */}
+          {routeCoords?.length > 0 && directions[currentStepIndex]?.targetCoord && (
+            <div style={{ 
+              padding: '8px 10px', 
+              background: 'var(--surface)', 
+              borderRadius: 6, 
+              marginBottom: 10,
+              fontSize: 11,
+              fontFamily: 'monospace',
+              color: 'var(--text-mid)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}>
+              <div>
+                <span style={{ fontWeight: 600, color: 'var(--text)' }}>Next waypoint: </span>
+                {directions[currentStepIndex].targetCoord[0].toFixed(5)}, {directions[currentStepIndex].targetCoord[1].toFixed(5)}
+              </div>
+              <button
+                onClick={() => {
+                  const [lat, lon] = directions[currentStepIndex].targetCoord;
+                  setMockPosition(lat, lon);
+                }}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 20,
+                  border: 'none',
+                  background: '#EA580C',
+                  color: '#fff',
+                  fontFamily: 'inherit',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                Jump →
+              </button>
+            </div>
+          )}
 
           {/* Row 2: presets - scrollable */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>            {NYC_PRESETS.map((p) => (
@@ -256,10 +351,68 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
   const { position, rawPosition, accuracy, error, loading, demoMode, permissionState, requestLocation, setMockPosition, devModeEnabled } = useLocation();
   const mapRef = useRef(null);
   const geoJson = routeData?.routeData;
+  const routeObj = routeData?.route;
   const transitStops = geoJson?.properties?.fullTransitInfo || [];
+
+  const [navActive, setNavActive] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  const directions = useMemo(
+    () => buildDirections(routeObj, transitStops),
+    [routeObj, transitStops]
+  );
+
+  const polylineCoords = geoJson?.geometry?.coordinates || [];
+
   const handleRecenter = () => {
+    console.log('mapRef:', mapRef.current);
     if (mapRef.current) mapRef.current.setView(position, 14);
   };
+
+  // fit whole route in map view, overview
+  const handleFitRoute = () => {
+    console.log('handleFitRoute called, mapRef:', mapRef.current);
+    console.log('geoJson:', geoJson);
+    if (mapRef.current && geoJson) {
+      const layer = L.geoJSON(geoJson);
+      console.log('bounds:', layer.getBounds());
+      mapRef.current.fitBounds(layer.getBounds(), { padding: [50, 50] });
+    }
+  };
+
+  // Start navigation when route data arrives
+  useEffect(() => {
+    if (geoJson && routeObj) {
+      setNavActive(true);
+      setCurrentStepIndex(0);
+    } else {
+      setNavActive(false);
+    }
+  }, [geoJson, routeObj]);
+
+  // Proximity detection — advance step when close enough to target
+  useEffect(() => {
+
+    // debug console print
+    console.log('Position updated:', position[0], position[1]);
+
+    if (!navActive || !directions.length) return;
+    const step = directions[currentStepIndex];
+    if (!step?.targetCoord) return;
+
+    const [targetLat, targetLon] = step.targetCoord;
+    const dist = haversineDistance(position[0], position[1], targetLat, targetLon);
+
+    if (dist < 40) {
+      setCurrentStepIndex(i => Math.min(i + 1, directions.length - 1));
+    }
+  }, [position]);
+
+  // end the trip and clear
+  const handleEndTrip = () => {
+    onNavigate('map', null);
+  };
+
   //fit the map to route size
   function FitRouteBounds({ data }) {
     const map = useMap();
@@ -277,29 +430,112 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
 
       <div className="screen-content" style={{ position: 'relative' }}>
 
+        {/* wrap in navActive to hide in navigation */}
         {/* Search bar (tapping navigates to Route Planning) */}
-        <div style={{ padding: '12px 16px', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }}>
-          <button
-            onClick={() => onNavigate('route')}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '11px 14px',
-              border: '1.5px solid var(--border)',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg)',
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-md)',
-              textAlign: 'left',
-              fontFamily: 'inherit',
-            }}
-          >
-            <PinIcon />
-            <span style={{ fontSize: 14, color: 'var(--text-light)' }}>Where to?</span>
-          </button>
-        </div>
+        {!navActive && ( 
+          <div style={{ padding: '12px 16px', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }}>
+            <button
+              onClick={() => onNavigate('route')}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '11px 14px',
+                border: '1.5px solid var(--border)',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg)',
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-md)',
+                textAlign: 'left',
+                fontFamily: 'inherit',
+              }}
+            >
+              <PinIcon />
+              <span style={{ fontSize: 14, color: 'var(--text-light)' }}>Where to?</span>
+            </button>
+          </div>
+        )}
+
+        {/* navigation HUD */}
+        {navActive && directions[currentStepIndex] && (() => {
+          const step = directions[currentStepIndex];
+          const isArrived = step.type === 'arrive';
+          return (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0, right: 0,
+              zIndex: 1200,
+              pointerEvents: 'none',
+              background: isArrived ? '#10B981' : 'var(--bg)',
+              borderBottom: `1px solid ${isArrived ? '#10B981' : 'var(--border)'}`,
+              padding: '14px 16px 20px',
+              boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
+            }}>
+              <div style={{ pointerEvents: 'all' }}>
+                {/* Step instruction */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <div style={{ fontSize: 32 }}>{step.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: isArrived ? '#fff' : 'var(--text)' }}>
+                      {step.instruction}
+                    </div>
+                    <div style={{ fontSize: 12, color: isArrived ? 'rgba(255,255,255,0.8)' : 'var(--text-mid)', marginTop: 2 }}>
+                      {step.subtext}
+                    </div>
+                  </div>
+                </div>
+                {/* Progress + end button */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: isArrived ? 'rgba(255,255,255,0.8)' : 'var(--text-mid)' }}>
+                    Step {currentStepIndex + 1} of {directions.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {!isArrived && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFitRoute();
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: 'var(--radius-md)',
+                          border: isArrived ? 'none' : '2px solid var(--red, #ef4444)',
+                          background: isArrived ? 'rgba(255,255,255,0.2)' : 'none',
+                          color: isArrived ? '#fff' : 'var(--red, #ef4444)',
+                          fontFamily: 'inherit',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ⊙ Overview
+                      </button>
+                    )}
+                    <button 
+                      onClick={handleEndTrip}
+                      style={{
+                          padding: '8px 16px',
+                          borderRadius: 'var(--radius-md)',
+                          border: isArrived ? 'none' : '2px solid var(--red, #ef4444)',
+                          background: isArrived ? 'rgba(255,255,255,0.2)' : 'none',
+                          color: isArrived ? '#fff' : 'var(--red, #ef4444)',
+                          fontFamily: 'inherit',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                      }}
+                    >
+                      {isArrived ? 'Done' : '■ End Trip'}
+                    </button>
+                  </div>
+                
+                </div>
+              </div>  
+            </div>
+          );
+        })()}
 
         {/* Status banner - shown for GPS error or while acquiring */}
         {(error || (loading && !demoMode)) && (
@@ -321,30 +557,6 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
           }}>
             <span style={{ fontSize: 14 }}>{error ? '⚠️' : '📡'}</span>
             <span>{error ?? 'Acquiring GPS signal…'}</span>
-          </div>
-        )}
- 
-        {/* Demo mode banner */}
-        {demoMode && (
-          <div style={{
-            position: 'absolute',
-            top: 68,
-            left: 12, right: 12,
-            zIndex: 1100,
-            background: '#FFF7ED',
-            border: '1px solid #FDBA74',
-            borderRadius: 'var(--radius-md)',
-            padding: '6px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 12,
-            color: '#9A3412',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          }}>
-            <span>🟠</span>
-            <span style={{ fontWeight: 600 }}>Demo Mode</span>
-            <span>— location is manually set</span>
           </div>
         )}
 
@@ -416,7 +628,7 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
             </Popup>
           </Marker>
         {/* Drawing the navigation path */}
-        {geoJson && (
+        {navActive && geoJson && (
             <>
               <GeoJSON 
                 data={geoJson} 
@@ -426,7 +638,7 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
             </>
           )}
         {/* Identify transit stops */}
-        {transitStops.map((segment, idx) => (
+        {navActive && transitStops.map((segment, idx) => (
           <React.Fragment key={idx}>
             {/* Departure */}
             <Marker 
@@ -459,7 +671,13 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
         </MapContainer>
 
         {/* Demo Panel */}
-        {permissionState !== 'idle' && devModeEnabled && <DemoPanel />}
+        {permissionState !== 'idle' && devModeEnabled && (
+          <DemoPanel 
+            routeCoords={polylineCoords}
+            directions={directions}
+            currentStepIndex={currentStepIndex}
+          />
+        )}
 
         {/* Recenter FAB */}
         <button
@@ -468,7 +686,7 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
             position: 'absolute',
             bottom: 16,
             right: 16,
-            zIndex: 1000,
+            zIndex: 1300,
             width: 40,
             height: 40,
             borderRadius: '50%',

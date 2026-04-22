@@ -34,9 +34,10 @@ export default function RouteResultsScreen({ onNavigate, routeData }) {
       });
 
       const geojsonData = await response.json();
+      console.log('NAVIGATE OUTPUT:', JSON.stringify(geojsonData));
 
-      // navigate back to map page carrying the data
-      onNavigate('map', { routeData: geojsonData });
+      // navigate back to map page carrying the data, passing route as well for directions building
+      onNavigate('map', { routeData: geojsonData, route: route });
 
     } catch (error) {
       console.error("Failed to fetch navigation route:", error);

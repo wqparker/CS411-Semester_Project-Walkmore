@@ -69,6 +69,13 @@ function getNearestStations(point, stations, topK = 20) {
 }
 
 function findThreeRoutes(Graph, maxArrivalTime, maxWalkingTime) {
+    console.log('findThreeRoutes called with:', { maxArrivalTime, maxWalkingTime });
+    console.log('Graph node count:', Object.keys(Graph.nodes).length);
+    console.log('Graph edge count:', Object.values(Graph.adjacencyList).reduce((sum, edges) => sum + edges.length, 0));
+    console.log('Edges from node 0:', Graph.adjacencyList[0]);
+    console.log('Edges to node 1:', Object.entries(Graph.adjacencyList)
+      .filter(([_, edges]) => edges.some(e => e.nodeId === '1'))
+      .map(([id]) => id));
 
     let queue = [[0, 0, 0, 0,[]]]; 
     const targetHalf = maxWalkingTime / 2; 
@@ -236,6 +243,12 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
 
     // wait for the calls
     await Promise.all(edgePromises);
+    console.log('Transit edges between islands:', 
+      Object.entries(Graph.adjacencyList)
+        .filter(([id]) => id !== '0' && id !== '1')
+        .filter(([_, edges]) => edges.length > 0)
+        .map(([id, edges]) => `${id} -> ${edges.map(e => e.nodeId).join(', ')}`)
+    );
 
     console.log("All edges added successfully.");
     //If you want to see the edges, uncomment
@@ -252,6 +265,7 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
     // printRouteSummary("Minimum Walking", results.minWalking);
     // printRouteSummary("Fastest", results.fastest);
     // printRouteSummary("Maximum Walking", results.maxWalkingWithinLimit);
+    console.log('ROUTES OUTPUT:', JSON.stringify(temp));
     return temp;
 }
 
