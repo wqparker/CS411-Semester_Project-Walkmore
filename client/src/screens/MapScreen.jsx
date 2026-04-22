@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { TopBar, BottomNav } from '../App';
 import { useLocation } from '../context/LocationContext';
+import { useAuth } from '../context/AuthContext';
 
 // file is getting large, **MARKED FOR REFACTORING**
 
@@ -353,9 +354,12 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
   const geoJson = routeData?.routeData;
   const routeObj = routeData?.route;
   const transitStops = geoJson?.properties?.fullTransitInfo || [];
-
   const [navActive, setNavActive] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const { token, user } = useAuth();
+  const startTimeRef = useRef(null);
+  const prevPositionRef = useRef(null);
+  const cumulativeDistRef = useRef(0);
 
   const directions = useMemo(
     () => buildDirections(routeObj, transitStops),
@@ -385,6 +389,9 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
     if (geoJson && routeObj) {
       setNavActive(true);
       setCurrentStepIndex(0);
+      startTimeRef.current = new Date();
+      prevPositionRef.current = null;
+      cumulativeDistRef.current = 0;
     } else {
       setNavActive(false);
     }
@@ -392,24 +399,65 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
 
   // Proximity detection — advance step when close enough to target
   useEffect(() => {
-
     // debug console print
     console.log('Position updated:', position[0], position[1]);
 
     if (!navActive || !directions.length) return;
+
+    // Accumulate distance travelled
+    if (prevPositionRef.current) {
+      const [prevLat, prevLon] = prevPositionRef.current;
+      const moved = haversineDistance(prevLat, prevLon, position[0], position[1]);
+      cumulativeDistRef.current += moved / 1000; // convert metres to km
+    }
+    prevPositionRef.current = [position[0], position[1]];
+
+    // Proximity check
     const step = directions[currentStepIndex];
     if (!step?.targetCoord) return;
-
     const [targetLat, targetLon] = step.targetCoord;
     const dist = haversineDistance(position[0], position[1], targetLat, targetLon);
-
     if (dist < 40) {
       setCurrentStepIndex(i => Math.min(i + 1, directions.length - 1));
     }
   }, [position]);
 
   // end the trip and clear
-  const handleEndTrip = () => {
+  const handleEndTrip = async () => {
+    const THRESHOLD_KM = 0.1;
+
+    if (routeObj && token && cumulativeDistRef.current >= THRESHOLD_KM) {
+      const strideLength = user?.height_cm ? user.height_cm * 0.00413 : 0.7;
+      const estimatedSteps = Math.round((cumulativeDistRef.current * 1000) / strideLength);
+      const estimatedCalories = Math.round((user?.weight || 70) * cumulativeDistRef.current * 1.036);
+      const completed = directions[currentStepIndex]?.type === 'arrive';
+
+      try {
+        await fetch('/api/trips', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            destination: routeObj.path?.[routeObj.path.length - 1],
+            path: routeObj.path,
+            startTime: startTimeRef.current,
+            endTime: new Date(),
+            distKm: cumulativeDistRef.current,
+            walkMinutes: routeObj.walkT,
+            totalMinutes: routeObj.totalT,
+            estimatedSteps,
+            estimatedCalories,
+            optimization: routeData?.optimization,
+            completed,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to save trip:', err);
+      }
+    }
+
     onNavigate('map', null);
   };
 

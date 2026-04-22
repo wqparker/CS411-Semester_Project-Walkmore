@@ -1,39 +1,71 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TopBar, BottomNav } from '../App';
-
-// Mock Data 
-
-const WEEKLY_DATA = [
-  { day: 'Mon', steps: 6200 },
-  { day: 'Tue', steps: 8900 },
-  { day: 'Wed', steps: 7400 },
-  { day: 'Thu', steps: 11200 },
-  { day: 'Fri', steps: 9654 },
-  { day: 'Sat', steps: 4300 },
-  { day: 'Sun', steps: 3100 },
-];
+import { useAuth } from '../context/AuthContext';
 
 const DAILY_GOAL = 10000;
-const TODAY_STEPS = 9654;
-const CALORIES_BURNED = 386;
-const WEEKLY_AVERAGE = Math.round(
-  WEEKLY_DATA.reduce((sum, d) => sum + d.steps, 0) / WEEKLY_DATA.length
-);
 
-const RECENT_ROUTES = [
-  { destination: 'Times Square', date: 'Today, 9:15 AM', steps: 3240, duration: '28 min', walking: '18 min walk' },
-  { destination: 'Central Park', date: 'Yesterday, 5:30 PM', steps: 4812, duration: '41 min', walking: '31 min walk' },
-  { destination: 'Brooklyn Bridge', date: 'Mar 24, 8:00 AM', steps: 2190, duration: '22 min', walking: '12 min walk' },
-];
+const getWeeklyData = (activityData) => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const chartData = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString('sv-SE');
+    const dayName = days[d.getDay()];
+    const record = activityData.find(item => item.date === dateStr);
+    chartData.push({
+      day: dayName,
+      steps: record ? record.totalSteps : 0,
+      isToday: i === 0,
+    });
+  }
+  return chartData;
+};
+
+// const CALORIES_BURNED = 386;
+
+
+// const RECENT_ROUTES = [
+//   { destination: 'Times Square', date: 'Today, 9:15 AM', steps: 3240, duration: '28 min', walking: '18 min walk' },
+//   { destination: 'Central Park', date: 'Yesterday, 5:30 PM', steps: 4812, duration: '41 min', walking: '31 min walk' },
+//   { destination: 'Brooklyn Bridge', date: 'Mar 24, 8:00 AM', steps: 2190, duration: '22 min', walking: '12 min walk' },
+// ];
 
 // ProgressScreen 
 
 export default function ProgressScreen({ onNavigate }) {
-  const [period, setPeriod] = useState('week'); // 'week' | 'month'
+  const [period, setPeriod] = useState('week');
+  const { token } = useAuth();
+  const [activityData, setActivityData] = useState([]);
+  const [recentTrips, setRecentTrips] = useState([]);
 
+  useEffect(() => {
+    if (!token) return;
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    fetch('/api/activity/weekly', { headers })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setActivityData(data))
+      .catch(err => console.error('Failed to fetch activity:', err));
+
+    fetch('/api/trips/recent', { headers })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setRecentTrips(data))
+      .catch(err => console.error('Failed to fetch trips:', err));
+  }, [token]);
+
+  const WEEKLY_DATA = getWeeklyData(activityData);
+  const todayRecord = activityData.find(
+    item => item.date === new Date().toLocaleDateString('sv-SE')
+  );
+  const TODAY_STEPS = todayRecord?.totalSteps || 0;
+  const TODAY_CALORIES = todayRecord?.totalCalories || 0;
   const goalPercent = Math.min(Math.round((TODAY_STEPS / DAILY_GOAL) * 100), 100);
-  const maxSteps = Math.max(...WEEKLY_DATA.map((d) => d.steps));
-
+  const maxSteps = Math.max(...WEEKLY_DATA.map(d => d.steps), 1);
+  const WEEKLY_AVERAGE = Math.round(
+    WEEKLY_DATA.reduce((sum, d) => sum + d.steps, 0) / 7
+  );
   return (
     <>
       <TopBar onAvatarClick={() => onNavigate('profile')} />
@@ -58,9 +90,7 @@ export default function ProgressScreen({ onNavigate }) {
             label="Steps Today"
             value={TODAY_STEPS.toLocaleString()}
             sub={`${goalPercent}% of daily goal`}
-            extra={
-              <ProgressBar percent={goalPercent} color="var(--primary)" />
-            }
+            extra={<ProgressBar percent={goalPercent} color="var(--primary)" />}
           />
 
           {/* Calories Card */}
@@ -69,7 +99,7 @@ export default function ProgressScreen({ onNavigate }) {
             iconBg="var(--orange-light)"
             iconColor="var(--orange)"
             label="Calories Burned"
-            value={CALORIES_BURNED.toLocaleString()}
+            value={TODAY_CALORIES.toLocaleString()}
             sub="Based on walking activity"
           />
 
@@ -122,7 +152,7 @@ export default function ProgressScreen({ onNavigate }) {
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 100 }}>
               {WEEKLY_DATA.map((d, i) => {
                 const heightPct = (d.steps / maxSteps) * 100;
-                const isToday = i === 4; // Friday = today in mock data
+                const isToday = d.isToday;
                 return (
                   <div
                     key={d.day}
@@ -186,38 +216,51 @@ export default function ProgressScreen({ onNavigate }) {
             <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
               Recent Routes
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {RECENT_ROUTES.map((route, i) => (
-                <div key={i} style={{
-                  ...cardStyle,
-                  display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-                }}>
-                  {/* Route icon */}
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
-                    background: 'var(--primary-light)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
+            {recentTrips.length === 0 ? (
+              <div style={{
+                ...cardStyle,
+                textAlign: 'center',
+                color: 'var(--text-mid)',
+                fontSize: 13,
+                padding: '24px 16px',
+              }}>
+                No trips yet. Plan a route to get started!
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recentTrips.map((trip, i) => (
+                  <div key={i} style={{
+                    ...cardStyle,
+                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
                   }}>
-                    <RouteIcon />
-                  </div>
-                  {/* Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {route.destination}
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'var(--primary-light)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <RouteIcon />
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-mid)' }}>{route.date}</div>
-                  </div>
-                  {/* Stats */}
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-                      {route.steps.toLocaleString()}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {trip.destination}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-mid)' }}>
+                        {new Date(trip.startTime).toLocaleString('en-US', { 
+                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                        })}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-mid)' }}>steps</div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                        {trip.estimatedSteps.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-mid)' }}>steps</div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>

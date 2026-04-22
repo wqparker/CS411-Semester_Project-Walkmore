@@ -38,7 +38,7 @@ export default function ProfileScreen({ onNavigate }) {
 
     const handleDeleteAccount = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/auth/account', {
+        const res = await fetch('/api/auth/account', {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         });

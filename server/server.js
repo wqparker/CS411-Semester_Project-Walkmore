@@ -4,6 +4,9 @@ import cors from 'cors';
 import { CalculatePath, Navigate } from './algorithm/routePlanner.js';
 import { checkDestination } from './ValidateInput.js';
 import { mockRoutes, mockGeoJSON } from './mockRoute.js';
+import { createUser } from './models/User.js';
+import { createTrip } from './models/Trip.js';
+import { createDailyActivity } from './models/DailyActivity.js';
 
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
@@ -183,11 +186,7 @@ app.post('/api/auth/google', async (req, res) => {
       }
       // Create or update incomplete user
       if (!existingUser) {
-        await users.insertOne({
-          google_id, email, name, picture,
-          profile_complete: false,
-          created_at: new Date(),
-        });
+        await users.insertOne(createUser({ google_id, email, name, picture }));
       }
       const jwtToken = jwt.sign({ google_id, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
       return res.json({ token: jwtToken, google_id, email, name, picture });
@@ -239,6 +238,88 @@ app.delete('/api/auth/account', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Delete account error:', err);
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// POST /api/trips
+app.post('/api/trips', authMiddleware, async (req, res) => {
+  const { destination, path, startTime, endTime, distKm, walkMinutes,
+          totalMinutes, estimatedSteps, estimatedCalories, optimization, completed } = req.body;
+
+  if (!destination || !startTime || !endTime || distKm === undefined) {
+    return res.status(400).json({ error: 'Missing required trip fields.' });
+  }
+
+  try {
+    const db = await getDb();
+    const date = new Date(startTime).toLocaleDateString('sv-SE');
+
+    const trip = createTrip({
+      google_id: req.user.google_id,
+      destination, path, startTime: new Date(startTime), endTime: new Date(endTime),
+      distKm, walkMinutes, totalMinutes, estimatedSteps, estimatedCalories,
+      optimization, completed
+    });
+
+    await db.collection('trips').insertOne(trip);
+
+    await db.collection('daily_activity').updateOne(
+      { google_id: req.user.google_id, date },
+      {
+        $inc: {
+          totalSteps: estimatedSteps,
+          totalDistKm: distKm,
+          totalCalories: estimatedCalories,
+          totalWalkMinutes: walkMinutes,
+          tripCount: 1,
+        },
+        $setOnInsert: { google_id: req.user.google_id, date },
+      },
+      { upsert: true }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Trip save error:', err);
+    res.status(500).json({ error: 'Failed to save trip.' });
+  }
+});
+
+// GET /api/trips/recent
+app.get('/api/trips/recent', authMiddleware, async (req, res) => {
+  try {
+    const db = await getDb();
+    const trips = await db.collection('trips')
+      .find({ google_id: req.user.google_id })
+      .sort({ startTime: -1 })
+      .limit(5)
+      .toArray();
+    res.json(trips);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch recent trips.' });
+  }
+});
+
+// GET /api/trips/weekly
+app.get('/api/activity/weekly', authMiddleware, async (req, res) => {
+  try {
+    const db = await getDb();
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - 6);
+    const fmt = (d) => d.toLocaleDateString('sv-SE');
+
+    const activity = await db.collection('daily_activity')
+      .find({
+        google_id: req.user.google_id,
+        date: { $gte: fmt(startDate), $lte: fmt(today) }
+      })
+      .sort({ date: 1 })
+      .toArray();
+
+    res.json(activity);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch weekly activity.' });
   }
 });
 

@@ -22,7 +22,7 @@ export default function AccountScreen({ onNavigate }) {
   const handleGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const res = await fetch('http://localhost:5000/api/auth/google', {
+        const res = await fetch('/api/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: tokenResponse.access_token, flow: 'register' }),
@@ -78,7 +78,7 @@ export default function AccountScreen({ onNavigate }) {
       : parseInt(form.height_ft);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/profile', {
+      const res = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
