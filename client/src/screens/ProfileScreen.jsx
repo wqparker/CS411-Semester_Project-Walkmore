@@ -1,10 +1,12 @@
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { TopBar, BottomNav } from '../App';
+import { useLocation } from '../context/LocationContext';
 
 export default function ProfileScreen({ onNavigate }) {
     const { user, token, logout } = useAuth();
     const [showConfirm, setShowConfirm] = useState(false);
+    const { devModeEnabled, toggleDevMode } = useLocation();
 
     const handleSignOut = () => {
       logout();
@@ -104,6 +106,40 @@ export default function ProfileScreen({ onNavigate }) {
               <InfoRow label="Birthday" value={formatDate(user?.dob)} />
               <InfoRow label="Height" value={formatHeight(user?.height_cm, user?.units)} />
               <InfoRow label="Weight" value={formatWeight(user?.weight, user?.units)} />
+              {/* Dev Mode Toggle */}
+              <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '14px 16px', borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)', background: 'var(--bg)',
+                  marginTop: 12,
+              }}>
+                  <div>
+                      <span style={{ fontSize: 14, color: 'var(--text-mid)', fontWeight: 500 }}>
+                          Developer Mode
+                      </span>
+                      <p style={{ fontSize: 11, color: 'var(--text-light)', margin: '2px 0 0' }}>
+                          Enables manual location control on map
+                      </p>
+                  </div>
+                  <button
+                      onClick={() => toggleDevMode(!devModeEnabled)}
+                      style={{
+                          width: 44, height: 24, borderRadius: 12,
+                          background: devModeEnabled ? 'var(--primary)' : 'var(--border)',
+                          border: 'none', cursor: 'pointer', position: 'relative',
+                          transition: 'background 0.2s', flexShrink: 0,
+                      }}
+                  >
+                      <div style={{
+                          width: 18, height: 18, borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: 3,
+                          left: devModeEnabled ? 23 : 3,
+                          transition: 'left 0.2s',
+                      }} />
+                  </button>
+              </div>
             </div>
           
             {/* Sign Out */}

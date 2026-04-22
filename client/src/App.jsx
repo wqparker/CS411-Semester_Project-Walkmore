@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
+import { LocationProvider } from './context/LocationContext';
 import './App.css';
 
 import MapScreen from './screens/MapScreen';
@@ -117,7 +118,9 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
-        <AppContent />
+        <LocationProvider>
+          <AppContent />
+        </LocationProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );
