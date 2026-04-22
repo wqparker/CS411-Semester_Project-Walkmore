@@ -388,7 +388,6 @@ export async function Navigate(route){
 
         //Wrap the navigation route to Open Street Map compatible format
         const osmData = convertToOsmGeoJSON(nav.NavigationRoute, nav.TransitSegment);
-        
         return osmData;
     } catch (error) {
         console.error("Navigate error:", error);
