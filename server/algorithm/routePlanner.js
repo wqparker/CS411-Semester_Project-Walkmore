@@ -4,7 +4,7 @@ import { dirname, join } from 'path';
 import { Node } from '../Graph/GraphNode.js';
 import {Location} from '../Graph/Location.js';
 import {TransitGraph} from '../Graph/Graph.js';
-import {getWalkingRoute, getTransitRoute, getWalkingNavigationRoute, getTransitNavigationRoute} from './APICaller.js';
+import {getWalkingRoute, getTransitRoute, getWalkingNavigationRoute, getTransitNavigationRoute, getNameFromCoord} from './APICaller.js';
 import polyline from '@mapbox/polyline';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -136,7 +136,8 @@ function findThreeRoutes(Graph, maxArrivalTime, maxWalkingTime) {
 
 export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime, WalkingTime){
     const src = new Location("Current Location","",srclat, srclon);
-    const dst = new Location("Destination","",dstlat, dstlon);
+    const {name} = await getNameFromCoord("" + dstlat + "," + dstlon);
+    const dst = new Location(name,"",dstlat, dstlon);
     const srcNode = new Node(0, src);
     const dstNode = new Node(1,dst);
     const stations = buildStationMap();

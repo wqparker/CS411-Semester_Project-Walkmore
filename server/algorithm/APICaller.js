@@ -107,6 +107,38 @@ async function getAddressFromCoord(input){
     }
 }
 
+async function getNameFromCoord(input) {
+  const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${input}&key=${apiKey}`;
+
+  try {
+    const response = await fetch(geoUrl);
+    const result = await response.json();
+
+    if (result.status !== 'OK' || !result.results || result.results.length === 0) {
+      return null;
+    }
+
+
+    const place = result.results.find(res =>
+      res.types.includes('point_of_interest') ||
+      res.types.includes('establishment') ||
+      res.types.includes('premise')
+    );
+
+    let name = "Unknown Location";
+    
+    if (place?.address_components?.[0]?.long_name) {
+      name = place.address_components[0].long_name;
+    } else {
+      name = result.results[0].address_components[0].long_name;
+    }
+
+    return { name };
+  } catch (error) {
+    console.error('Geocoding Error:', error);
+    return null;
+  }
+}
 async function getAddressFromName(input){
   //Assumes inut is name or address
   const placesUrl = 'https://places.googleapis.com/v1/places:searchText';
@@ -228,4 +260,4 @@ async function getWalkingNavigationRoute(srclat, srclon, dstlat, dstlon) {
     console.error(e);
   }
 }
-export { getWalkingRoute, getTransitRoute , getAddressFromCoord, getAddressFromName, getTransitNavigationRoute, getWalkingNavigationRoute};
+export { getWalkingRoute, getTransitRoute , getAddressFromCoord, getNameFromCoord, getAddressFromName, getTransitNavigationRoute, getWalkingNavigationRoute};
