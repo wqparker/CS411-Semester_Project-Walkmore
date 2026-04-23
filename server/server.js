@@ -18,8 +18,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const HARDCODED_SRC_LAT = 40.7484;
-const HARDCODED_SRC_LON = -73.9857;
+// const HARDCODED_SRC_LAT = 40.7484;
+// const HARDCODED_SRC_LON = -73.9857;
 
 async function geocodeDestination(address) {
   const apiKey = process.env.GOOGLE_API_KEY;
@@ -39,6 +39,7 @@ async function geocodeDestination(address) {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'WalkMore backend is running!' });
 });
+
 app.post('/api/validate', async (req, res) => {
   try{
   const { input } = req.body;
@@ -52,10 +53,11 @@ app.post('/api/validate', async (req, res) => {
     res.status(500).json({ error: 'Internal server error during location validation.' });
   }
 });
-app.post('/api/route', async (req, res) => {
-  const { destination, arrivalTime, walkingMins, optimization } = req.body;
 
-  if (!destination || !arrivalTime || !walkingMins || !optimization) {
+app.post('/api/route', async (req, res) => {
+  const { destination, arrivalTime, walkingMins, optimization, srcLat, srcLon } = req.body;
+
+  if (!destination || !arrivalTime || !walkingMins || !optimization || !srcLat || !srcLon) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
@@ -70,8 +72,8 @@ app.post('/api/route', async (req, res) => {
   }
   try {
     const routes = await CalculatePath(
-      HARDCODED_SRC_LAT,
-      HARDCODED_SRC_LON,
+      srcLat,
+      srcLon,
       coords.lat,
       coords.lon,
       parseInt(arrivalTime),

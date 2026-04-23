@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -24,7 +24,13 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
   const routeObj = routeData?.route;
   const transitStops = geoJson?.properties?.fullTransitInfo || [];
 
-  const session = useNavigationSession(position);
+  const [isRerouting, setIsRerouting] = useState(false);
+
+  const session = useNavigationSession(
+    position,
+    routeObj?.coords,       // route node coords for off-route detection
+    handleOffRoute          // callback — defined below
+  );  
 
   useEffect(() => {
     if (geoJson && routeObj) {
@@ -59,6 +65,61 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
     }
     session.endSession();
     onNavigate('map', null);
+  };
+
+  async function handleOffRoute() {
+    if (isRerouting || !routeObj) return;
+    setIsRerouting(true);
+    
+    try {
+      // Compute remaining arrival budget from planned total minus elapsed
+      const elapsed = (new Date() - session.startTimeRef.current) / 60000;
+      const remainingArrival = Math.max(5, Math.round(routeObj.totalT - elapsed));
+      const walkingMins = routeObj.walkT;
+      const destination = routeObj.path?.[routeObj.path.length - 1];
+    
+      const routeRes = await fetch('/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination,
+          arrivalTime: remainingArrival,
+          walkingMins,
+          optimization: routeData?.optimization || 'balanced',
+          srcLat: position[0],
+          srcLon: position[1],
+        }),
+      });
+    
+      const routeJson = await routeRes.json();
+      if (!routeRes.ok || !routeJson.route) throw new Error('No route returned');
+    
+      const navRes = await fetch('/api/navigate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ route: routeJson.route }),
+      });
+    
+      const newGeoJson = await navRes.json();
+      if (!navRes.ok || !newGeoJson) throw new Error('No nav data returned');
+    
+      // Restart session with new route
+      const newTransitStops = newGeoJson?.properties?.fullTransitInfo || [];
+      session.startSession(routeJson.route, newTransitStops);
+    
+      // Update routeData in place so GeoJSON polyline re-renders
+      // onNavigate keeps us on map screen, just refreshes the data
+      onNavigate('map', {
+        routeData: newGeoJson,
+        route: routeJson.route,
+        optimization: routeData?.optimization || 'balanced',
+      });
+    
+    } catch (err) {
+      console.error('Reroute failed:', err);
+    } finally {
+      setIsRerouting(false);
+    }
   };
 
   const { navActive, directions, currentStepIndex } = session;
@@ -97,6 +158,7 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
             currentStepIndex={currentStepIndex}
             onEndTrip={handleEndTrip}
             onFitRoute={handleFitRoute}
+            isRerouting={isRerouting}
           />
         )}
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TopBar, BottomNav } from '../App';
+import { useLocation } from '../context/LocationContext';
 
 // RoutePlanningScreen 
 
@@ -14,6 +15,8 @@ export default function RoutePlanningScreen({ onNavigate }) {
     JSON.parse(localStorage.getItem('recentSearches') || '[]')
   );
   const [showDropdown, setShowDropdown] = useState(false);
+  // get position from context
+  const { position } = useLocation();
 
   const optimizationOptions = [
     {
@@ -105,6 +108,8 @@ export default function RoutePlanningScreen({ onNavigate }) {
           arrivalTime,
           walkingMins,
           optimization,
+          srcLat: position[0],
+          srcLon: position[1],
         }),
       });
 
