@@ -214,7 +214,7 @@ export default function ProfileScreen({ onNavigate }) {
         
           </div>
         </div>
-        <BottomNav active="map" onChange={onNavigate} />
+        <BottomNav active="" onChange={onNavigate} />
       </>
     );
 }
