@@ -304,9 +304,10 @@ app.get('/api/trips/recent', authMiddleware, async (req, res) => {
 app.get('/api/activity/weekly', authMiddleware, async (req, res) => {
   try {
     const db = await getDb();
+    const days = parseInt(req.query.days) || 7;
     const today = new Date();
     const startDate = new Date();
-    startDate.setDate(today.getDate() - 6);
+    startDate.setDate(today.getDate() - (days - 1));
     const fmt = (d) => d.toLocaleDateString('sv-SE');
 
     const activity = await db.collection('daily_activity')

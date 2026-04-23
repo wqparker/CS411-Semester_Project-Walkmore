@@ -23,6 +23,30 @@ const getWeeklyData = (activityData) => {
   return chartData;
 };
 
+const getMonthlyData = (activityData) => {
+  // Group last 28 days into 4 weekly buckets
+  const buckets = [
+    { label: '3w ago', steps: 0 },
+    { label: '2w ago', steps: 0 },
+    { label: 'Last wk', steps: 0 },
+    { label: 'This wk', steps: 0 },
+  ];
+
+  const today = new Date();
+
+  activityData.forEach(record => {
+    const recordDate = new Date(record.date + 'T00:00:00');
+    const daysAgo = Math.floor((today - recordDate) / (1000 * 60 * 60 * 24));
+    // 0-6 = this week, 7-13 = last week, 14-20 = 2w ago, 21-27 = 3w ago
+    const bucketIndex = 3 - Math.floor(daysAgo / 7);
+    if (bucketIndex >= 0 && bucketIndex <= 3) {
+      buckets[bucketIndex].steps += record.totalSteps;
+    }
+  });
+
+  return buckets;
+};
+
 // const CALORIES_BURNED = 386;
 
 
@@ -43,8 +67,9 @@ export default function ProgressScreen({ onNavigate }) {
   useEffect(() => {
     if (!token) return;
     const headers = { 'Authorization': `Bearer ${token}` };
+    const days = period === 'month' ? 28 : 7;
 
-    fetch('/api/activity/weekly', { headers })
+    fetch(`/api/activity/weekly?days=${days}`, { headers })
       .then(res => res.ok ? res.json() : [])
       .then(data => setActivityData(data))
       .catch(err => console.error('Failed to fetch activity:', err));
@@ -53,18 +78,20 @@ export default function ProgressScreen({ onNavigate }) {
       .then(res => res.ok ? res.json() : [])
       .then(data => setRecentTrips(data))
       .catch(err => console.error('Failed to fetch trips:', err));
-  }, [token]);
+  }, [token, period]);
 
-  const WEEKLY_DATA = getWeeklyData(activityData);
+  const CHART_DATA = period === 'week' ? getWeeklyData(activityData) : getMonthlyData(activityData);
+  const maxSteps = Math.max(...CHART_DATA.map(d => d.steps), 1);
+
   const todayRecord = activityData.find(
     item => item.date === new Date().toLocaleDateString('sv-SE')
   );
   const TODAY_STEPS = todayRecord?.totalSteps || 0;
   const TODAY_CALORIES = todayRecord?.totalCalories || 0;
   const goalPercent = Math.min(Math.round((TODAY_STEPS / DAILY_GOAL) * 100), 100);
-  const maxSteps = Math.max(...WEEKLY_DATA.map(d => d.steps), 1);
+  
   const WEEKLY_AVERAGE = Math.round(
-    WEEKLY_DATA.reduce((sum, d) => sum + d.steps, 0) / 7
+    getWeeklyData(activityData).reduce((sum, d) => sum + d.steps, 0) / 7
   );
   return (
     <>
@@ -150,12 +177,12 @@ export default function ProgressScreen({ onNavigate }) {
 
             {/* Bar chart */}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 100 }}>
-              {WEEKLY_DATA.map((d, i) => {
+              {CHART_DATA.map((d) => {
                 const heightPct = (d.steps / maxSteps) * 100;
-                const isToday = d.isToday;
+                const isToday = d.isToday ?? false;
                 return (
                   <div
-                    key={d.day}
+                    key={d.label ?? d.day}
                     style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}
                   >
                     <div
@@ -173,7 +200,7 @@ export default function ProgressScreen({ onNavigate }) {
                       fontWeight: isToday ? 700 : 400,
                       color: isToday ? 'var(--primary)' : 'var(--text-light)',
                     }}>
-                      {d.day}
+                      {d.label ?? d.day}
                     </span>
                   </div>
                 );

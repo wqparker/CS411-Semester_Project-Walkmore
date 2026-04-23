@@ -69,10 +69,12 @@ const demoIcon = L.divIcon({
 });
 
 // Recenter helper (keeps map in sync if position changes) 
-function RecenterMap({ position }) {
+function RecenterMap({ position, navActive }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(position, map.getZoom());
+    if (navActive) {
+      map.setView(position, 16);
+    }
   }, [position]);
   return null;
 }
@@ -666,7 +668,7 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <RecenterMap position={position} />
+          <RecenterMap position={position} navActive={navActive}/>
           <MapController mapRef={mapRef} />
           <Marker position={position} icon={demoMode ? demoIcon : youIcon}>
             <Popup>
