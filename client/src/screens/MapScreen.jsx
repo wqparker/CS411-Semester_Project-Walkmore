@@ -65,8 +65,10 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
 
   return (
     <>
-      <TopBar onAvatarClick={onAvatarClick} />
-
+      <div style={{ pointerEvents: permissionState === 'idle' ? 'none' : 'all' }}>
+        <TopBar onAvatarClick={onAvatarClick} />
+      </div>
+        
       <div className="screen-content" style={{ position: 'relative' }}>
 
         {/* Search bar */}
@@ -180,24 +182,28 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
         )}
 
         {/* Recenter FAB */}
-        <button
-          onClick={handleRecenter}
-          aria-label="Re-center map"
-          style={{
-            position: 'absolute', bottom: 16, right: 16, zIndex: 1300,
-            width: 40, height: 40, borderRadius: '50%',
-            background: 'var(--primary)', color: '#fff',
-            border: 'none', cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(37,99,235,0.45)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <RecenterIcon />
-        </button>
+        <div style={{ pointerEvents: permissionState === 'idle' ? 'none' : 'all' }}>
+          <button
+            onClick={handleRecenter}
+            aria-label="Re-center map"
+            style={{
+              position: 'absolute', bottom: 16, right: 16, zIndex: 1300,
+              width: 40, height: 40, borderRadius: '50%',
+              background: 'var(--primary)', color: '#fff',
+              border: 'none', cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(37,99,235,0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <RecenterIcon />
+          </button>
+        </div>
 
       </div>
 
-      <BottomNav active="map" onChange={onNavigate} />
+      <div style={{ pointerEvents: permissionState === 'idle' ? 'none' : 'all' }}>
+        <BottomNav active="map" onChange={onNavigate} />
+      </div>
     </>
   );
 }
