@@ -60,7 +60,7 @@ async function checkDestination(input) {
       const lon = result.location.longitude;
       const isNYC = result.addressComponents.some(c => 
       (c.types.includes("locality") || c.types.includes("sublocality")) && 
-      ["New York", "Brooklyn", "Bronx", "Queens", "Staten Island"].includes(c.longText)
+      ["New York", "Brooklyn", "The Bronx", "Queens", "Staten Island"].includes(c.longText)
       );
       if(isNYC){
         console.log(`In NYC`);
@@ -72,6 +72,7 @@ async function checkDestination(input) {
         }    
       } else{
         console.log(`Out of NYC`);
+        console.log(result.formatted_address);
         return {
             code: 1, // Outside NYC
             lat: lat,
