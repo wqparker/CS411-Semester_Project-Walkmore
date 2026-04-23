@@ -7,6 +7,8 @@ export default function ProfileScreen({ onNavigate }) {
     const { user, token, logout } = useAuth();
     const [showConfirm, setShowConfirm] = useState(false);
     const { devModeEnabled, toggleDevMode } = useLocation();
+    const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError]  = useState(false);
 
     const handleSignOut = () => {
       logout();
@@ -75,12 +77,30 @@ export default function ProfileScreen({ onNavigate }) {
           
             {/* Avatar + Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
-              {user?.picture ? (
-                <img
-                  src={user.picture}
-                  alt="Profile"
-                  style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
-                />
+              {user?.picture && !imgError ? (
+                <>
+                  {/* Fallback initial shown while image loads */}
+                  {!imgLoaded && (
+                    <div style={{
+                      width: 64, height: 64, borderRadius: '50%',
+                      background: 'var(--primary)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      fontSize: 24, color: '#fff', fontWeight: 700,
+                    }}>
+                      {user?.name?.[0] ?? '?'}
+                    </div>
+                  )}
+                  <img
+                    src={user.picture}
+                    alt="Profile"
+                    onLoad={() => setImgLoaded(true)}
+                    onError={() => setImgError(true)}
+                    style={{
+                      width: 64, height: 64, borderRadius: '50%', objectFit: 'cover',
+                      display: imgLoaded ? 'block' : 'none', // hide until loaded
+                    }}
+                  />
+                </>
               ) : (
                 <div style={{
                   width: 64, height: 64, borderRadius: '50%',
