@@ -3,11 +3,16 @@ import jwt from 'jsonwebtoken';
 import app from '../server.js';
 import { getDb } from '../db.js';
 import { checkDestination } from '../ValidateInput.js';
-import { CalculatePath } from '../algorithm/routePlanner.js';
+import { CalculatePath, Navigate } from '../algorithm/routePlanner.js';
+import { createTrip } from '../models/Trip.js';
+import { createDailyActivity } from '../models/DailyActivity.js';
 
 // Module mocks (hoisted by babel-jest before any imports run)
 jest.mock('../db.js');
-jest.mock('../algorithm/routePlanner.js', () => ({ CalculatePath: jest.fn() }));
+jest.mock('../algorithm/routePlanner.js', () => ({ 
+  CalculatePath: jest.fn(), 
+  Navigate: jest.fn(), 
+}));
 jest.mock('../ValidateInput.js', () => ({ checkDestination: jest.fn() }));
 
 // Constants 
@@ -358,7 +363,10 @@ describe('GET /api/autocomplete', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: jest.fn().mockResolvedValueOnce({
-        predictions: [{ description: 'New York, NY' }, { description: 'Newark, NJ' }],
+        suggestions: [
+          { placePrediction: { text: { text: 'New York, NY, USA' } } },
+          { placePrediction: { text: { text: 'Newark, NJ, USA' } } },
+        ],
       }),
     });
     const res = await request(app).get('/api/autocomplete').query({ q: 'New York' });
@@ -375,6 +383,8 @@ describe('POST /api/route', () => {
     arrivalTime: '60',
     walkingMins: '20',
     optimization: 'time',
+    srcLat: 40.7484,
+    srcLon: -73.9857,
   };
 
   test('400 when required fields are missing', async () => {
@@ -421,4 +431,284 @@ describe('POST /api/route', () => {
     const res = await request(app).post('/api/route').send(VALID_BODY);
     expect(res.status).toBe(404);
   });
+});
+
+// POST /api/navigate
+ 
+describe('POST /api/navigate', () => {
+ 
+  test('400 when route is missing from body', async () => {
+    const res = await request(app).post('/api/navigate').send({});
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+ 
+  test('500 when Navigate returns null', async () => {
+    Navigate.mockResolvedValueOnce(null);
+    const res = await request(app)
+      .post('/api/navigate')
+      .send({ route: { path: ['A', 'B'], coords: [[0, 0], [1, 1]] } });
+    expect(res.status).toBe(500);
+  });
+ 
+  test('200 with GeoJSON on success', async () => {
+    const mockGeoJson = {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [[-73.98, 40.74]] },
+      properties: { fullTransitInfo: [] },
+    };
+    Navigate.mockResolvedValueOnce(mockGeoJson);
+ 
+    const res = await request(app)
+      .post('/api/navigate')
+      .send({ route: { path: ['A', 'B'], coords: [[40.74, -73.98], [40.75, -73.97]] } });
+ 
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('type', 'Feature');
+    expect(res.body.geometry).toHaveProperty('type', 'LineString');
+  });
+ 
+});
+ 
+// POST /api/trips
+ 
+describe('POST /api/trips', () => {
+ 
+  const VALID_TRIP = {
+    destination: 'Grand Central',
+    path: ['Penn Station', 'Grand Central'],
+    startTime: new Date('2025-01-01T10:00:00Z').toISOString(),
+    endTime: new Date('2025-01-01T10:30:00Z').toISOString(),
+    distKm: 1.5,
+    walkMinutes: 15,
+    totalMinutes: 30,
+    estimatedSteps: 1800,
+    estimatedCalories: 95,
+    optimization: 'balanced',
+    completed: true,
+  };
+ 
+  test('401 when no Authorization header is present', async () => {
+    const res = await request(app).post('/api/trips').send(VALID_TRIP);
+    expect(res.status).toBe(401);
+  });
+ 
+  test('401 when JWT is invalid', async () => {
+    const res = await request(app)
+      .post('/api/trips')
+      .set({ Authorization: 'Bearer garbage' })
+      .send(VALID_TRIP);
+    expect(res.status).toBe(401);
+  });
+ 
+  test('400 when required fields are missing', async () => {
+    const res = await request(app)
+      .post('/api/trips')
+      .set(authHeader())
+      .send({ destination: 'Grand Central' }); // missing startTime, endTime, distKm
+    expect(res.status).toBe(400);
+  });
+ 
+  test('200 and calls insertOne on trips collection', async () => {
+    const ops = mockDb();
+ 
+    const res = await request(app)
+      .post('/api/trips')
+      .set(authHeader())
+      .send(VALID_TRIP);
+ 
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+    expect(ops.insertOne).toHaveBeenCalledTimes(1);
+    expect(ops.insertOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        google_id: BASE_USER.google_id,
+        destination: 'Grand Central',
+        distKm: 1.5,
+        completed: true,
+      })
+    );
+  });
+ 
+  test('200 and upserts daily_activity with $inc', async () => {
+    const ops = mockDb();
+ 
+    await request(app)
+      .post('/api/trips')
+      .set(authHeader())
+      .send(VALID_TRIP);
+ 
+    expect(ops.updateOne).toHaveBeenCalledTimes(1);
+    expect(ops.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ google_id: BASE_USER.google_id }),
+      expect.objectContaining({
+        $inc: expect.objectContaining({
+          totalSteps: VALID_TRIP.estimatedSteps,
+          totalDistKm: VALID_TRIP.distKm,
+          totalCalories: VALID_TRIP.estimatedCalories,
+          totalWalkMinutes: VALID_TRIP.walkMinutes,
+          tripCount: 1,
+        }),
+      }),
+      { upsert: true }
+    );
+  });
+ 
+});
+ 
+// GET /api/trips/recent
+ 
+describe('GET /api/trips/recent', () => {
+ 
+  test('401 when no Authorization header is present', async () => {
+    const res = await request(app).get('/api/trips/recent');
+    expect(res.status).toBe(401);
+  });
+ 
+  test('401 when JWT is invalid', async () => {
+    const res = await request(app)
+      .get('/api/trips/recent')
+      .set({ Authorization: 'Bearer garbage' });
+    expect(res.status).toBe(401);
+  });
+ 
+  test('200 with array of trips', async () => {
+    const fakeTripList = [
+      { destination: 'Grand Central', distKm: 1.5 },
+      { destination: 'Times Square', distKm: 0.8 },
+    ];
+ 
+    // mock find().sort().limit().toArray() chain
+    getDb.mockResolvedValue({
+      collection: jest.fn().mockReturnValue({
+        find: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              toArray: jest.fn().mockResolvedValue(fakeTripList),
+            }),
+          }),
+        }),
+      }),
+    });
+ 
+    const res = await request(app)
+      .get('/api/trips/recent')
+      .set(authHeader());
+ 
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0].destination).toBe('Grand Central');
+  });
+ 
+});
+ 
+// GET /api/activity/weekly
+ 
+describe('GET /api/activity/weekly', () => {
+ 
+  test('401 when no Authorization header is present', async () => {
+    const res = await request(app).get('/api/activity/weekly');
+    expect(res.status).toBe(401);
+  });
+ 
+  test('401 when JWT is invalid', async () => {
+    const res = await request(app)
+      .get('/api/activity/weekly')
+      .set({ Authorization: 'Bearer garbage' });
+    expect(res.status).toBe(401);
+  });
+ 
+  test('200 returns 7 days of activity by default', async () => {
+    const fakeActivity = [
+      { date: '2025-01-01', totalSteps: 3000 },
+      { date: '2025-01-02', totalSteps: 4500 },
+    ];
+ 
+    getDb.mockResolvedValue({
+      collection: jest.fn().mockReturnValue({
+        find: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            toArray: jest.fn().mockResolvedValue(fakeActivity),
+          }),
+        }),
+      }),
+    });
+ 
+    const res = await request(app)
+      .get('/api/activity/weekly')
+      .set(authHeader());
+ 
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0]).toHaveProperty('totalSteps', 3000);
+  });
+ 
+  test('200 respects custom days query param', async () => {
+    getDb.mockResolvedValue({
+      collection: jest.fn().mockReturnValue({
+        find: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            toArray: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      }),
+    });
+ 
+    const res = await request(app)
+      .get('/api/activity/weekly')
+      .query({ days: 30 })
+      .set(authHeader());
+ 
+    expect(res.status).toBe(200);
+  });
+ 
+});
+ 
+// Models
+ 
+describe('createTrip model', () => {
+ 
+  test('returns object with all expected fields', () => {
+    const input = {
+      google_id: 'uid-123',
+      destination: 'Grand Central',
+      path: ['Penn Station', 'Grand Central'],
+      startTime: new Date('2025-01-01T10:00:00Z'),
+      endTime: new Date('2025-01-01T10:30:00Z'),
+      distKm: 1.5,
+      walkMinutes: 15,
+      totalMinutes: 30,
+      estimatedSteps: 1800,
+      estimatedCalories: 95,
+      optimization: 'balanced',
+      completed: true,
+    };
+ 
+    const trip = createTrip(input);
+ 
+    expect(trip.google_id).toBe('uid-123');
+    expect(trip.destination).toBe('Grand Central');
+    expect(trip.distKm).toBe(1.5);
+    expect(trip.estimatedSteps).toBe(1800);
+    expect(trip.estimatedCalories).toBe(95);
+    expect(trip.completed).toBe(true);
+    expect(trip.optimization).toBe('balanced');
+  });
+ 
+});
+ 
+describe('createDailyActivity model', () => {
+ 
+  test('returns object with zeroed counters and correct keys', () => {
+    const activity = createDailyActivity({ google_id: 'uid-123', date: '2025-01-01' });
+ 
+    expect(activity.google_id).toBe('uid-123');
+    expect(activity.date).toBe('2025-01-01');
+    expect(activity.totalSteps).toBe(0);
+    expect(activity.totalDistKm).toBe(0);
+    expect(activity.totalCalories).toBe(0);
+    expect(activity.totalWalkMinutes).toBe(0);
+    expect(activity.tripCount).toBe(0);
+  });
+ 
 });
