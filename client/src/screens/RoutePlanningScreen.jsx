@@ -180,96 +180,101 @@ export default function RoutePlanningScreen({ onNavigate }) {
           </h1>
 
           {/* Destination */}
-          <div className="form-group">
-  <label className="form-label">Destination</label>
-  <div className="input-wrapper">
-    <span className="input-icon-left"><SearchIcon /></span>
-    <input
-      className={`form-input has-left-icon ${errors.destination ? 'input-error-border' : ''}`}
-      type="text"
-      placeholder="Address, name, or coordinates"
-      value={destination}
-      onChange={(e) => handleDestinationChange(e.target.value)}
-      onFocus={() => setShowDropdown(true)}
-      onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-      style={errors.destination ? { borderColor: 'var(--red)' } : {}}
-    />
-  </div>
-  {errors.destination && <p className="input-error">{errors.destination}</p>}
+          <div className="form-group" style={{ position: 'relative' }}>
+            <label className="form-label">Destination</label>
+            <div className="input-wrapper">
+              <span className="input-icon-left"><SearchIcon /></span>
+              <input
+                className={`form-input has-left-icon ${errors.destination ? 'input-error-border' : ''}`}
+                type="text"
+                placeholder="Address, name, or coordinates"
+                value={destination}
+                onChange={(e) => handleDestinationChange(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                style={errors.destination ? { borderColor: 'var(--red)' } : {}}
+              />
+            </div>
+            {errors.destination && <p className="input-error">{errors.destination}</p>}
 
-          {/* Dropdown */}
-          {showDropdown && (suggestions.length > 0 || (destination.length === 0 && recentSearches.length > 0)) && (
-          <div style={{
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-md)',
-                marginTop: 4,
-                overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            }}>
-                {destination.length === 0 && recentSearches.length > 0 && (
-                  <>
-                    <div style={{ padding: '8px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-mid)', background: 'var(--surface)' }}>
-                      RECENT SEARCHES
-                    </div>
-                    {recentSearches.map((s, i) => (
-                      <button
-                        key={i}
-                        onMouseDown={() => {
-                          setDestination(s);
-                          setSuggestions([]);
-                          setShowDropdown(false);
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: 'none',
-                          borderBottom: '1px solid var(--border)',
-                          background: 'none',
-                          cursor: 'pointer',
-                          fontFamily: 'inherit',
-                          fontSize: 13,
-                          color: 'var(--text)',
-                          textAlign: 'left',
-                        }}
-                      >
-                        🕐 {s}
-                      </button>
-                    ))}
-                  </>
-                )}
-                {suggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    onMouseDown={() => {
-                      setDestination(s);
-                      setSuggestions([]);
-                      setShowDropdown(false);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      width: '100%',
-                      padding: '10px 14px',
-                      border: 'none',
-                      borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      fontSize: 13,
-                      color: 'var(--text)',
-                      textAlign: 'left',
-                    }}
-                  >
-                    📍 {s}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Dropdown */}
+            {showDropdown && (suggestions.length > 0 || (destination.length === 0 && recentSearches.length > 0)) && (
+            <div style={{
+                  position: 'absolute',   
+                  top: '100%',            
+                  left: 0,                
+                  right: 0,               
+                  zIndex: 9999,
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  marginTop: 4,
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              }}>
+                  {destination.length === 0 && recentSearches.length > 0 && (
+                    <>
+                      <div style={{ padding: '8px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text-mid)', background: 'var(--surface)' }}>
+                        RECENT SEARCHES
+                      </div>
+                      {recentSearches.map((s, i) => (
+                        <button
+                          key={i}
+                          onMouseDown={() => {
+                            setDestination(s);
+                            setSuggestions([]);
+                            setShowDropdown(false);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            width: '100%',
+                            padding: '10px 14px',
+                            border: 'none',
+                            borderBottom: '1px solid var(--border)',
+                            background: 'none',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            fontSize: 13,
+                            color: 'var(--text)',
+                            textAlign: 'left',
+                          }}
+                        >
+                          🕐 {s}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={() => {
+                        setDestination(s);
+                        setSuggestions([]);
+                        setShowDropdown(false);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                        color: 'var(--text)',
+                        textAlign: 'left',
+                      }}
+                    >
+                      📍 {s}
+                    </button>
+                  ))}
+                </div>
+              )}
           </div>
 
           {/* Arrival Time */}

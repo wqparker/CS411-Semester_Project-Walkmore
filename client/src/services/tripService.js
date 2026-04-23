@@ -11,9 +11,10 @@ export async function saveTrip(token, {
 }) {
   if (!routeObj || !token || cumulativeDist < THRESHOLD_KM) return;
 
-  const estimatedSteps = Math.round(routeObj.walkT * 100); // ~100 steps/min average
-  const walkDistKm = (routeObj.walkT / routeObj.totalT) * routeObj.dist;
-  const estimatedCalories = Math.round((user?.weight || 70) * walkDistKm * 1.036);
+  const strideLength = user?.height_cm ? user.height_cm * 0.00413 : 0.7;
+  const estimatedSteps = Math.round((cumulativeDist * 1000) / strideLength);
+  const estimatedCalories = Math.round((user?.weight || 70) * cumulativeDist * 1.036);
+  const completed = directions[currentStepIndex]?.type === 'arrive';
 
   await fetch('/api/trips', {
     method: 'POST',

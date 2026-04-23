@@ -99,16 +99,35 @@ app.post('/api/route', async (req, res) => {
 });
 
 app.get('/api/autocomplete', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   const { q } = req.query;
   if (!q || q.length < 2) return res.json({ suggestions: [] });
 
   const apiKey = process.env.GOOGLE_API_KEY;
-  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(q)}&key=${apiKey}&components=country:us&location=40.7484,-73.9857&radius=50000`;
+  const url = `https://places.googleapis.com/v1/places:autocomplete`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+      },
+      body: JSON.stringify({
+        input: q,
+        locationBias: {
+          circle: {
+            center: { latitude: 40.7484, longitude: -73.9857 },
+            radius: 50000.0
+          }
+        }
+      }),
+    });
+
     const data = await response.json();
-    const suggestions = data.predictions.map(p => p.description);
+    const suggestions = (data.suggestions || [])
+      .map(s => s.placePrediction?.text?.text)
+      .filter(Boolean);
     res.json({ suggestions });
   } catch (err) {
     console.error('Autocomplete error:', err);
