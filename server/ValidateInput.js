@@ -27,8 +27,6 @@ async function checkDestination(input) {
       ["New York", "Brooklyn", "Bronx", "Queens", "Staten Island"].includes(c.long_name)
       );
     if(isNYC){
-         console.log(`Address for coordinates: "${input}":`, result?.formatted_address);
-         console.log(`lat: "${lat}" lon: "${lon}"`);
         return {
             code: 0, // Inside NYC
             lat: result.geometry.location.lat,
@@ -37,7 +35,6 @@ async function checkDestination(input) {
         };
     }
     else{
-        console.log("Outside NYC");
         return {
             code: 1, // outside NYC
             lat: result.geometry.location.lat,
@@ -63,7 +60,6 @@ async function checkDestination(input) {
       ["New York", "Brooklyn", "The Bronx", "Queens", "Staten Island"].includes(c.longText)
       );
       if(isNYC){
-        console.log(`In NYC`);
         return {
             code: 0, // Inside NYC
             lat: lat,
@@ -84,6 +80,3 @@ async function checkDestination(input) {
 }
 
 export{checkDestination};
-//checkDestination("Empire State Building");
-// checkDestination("350 5th Ave, New York, NY 10118");
-//checkDestination("40.7484405,-73.9856643");

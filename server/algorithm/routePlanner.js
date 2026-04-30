@@ -15,6 +15,7 @@ function toRadians(deg) {
 }
 
 function haversineMeters(pointA, pointB) {
+  //approximates the distance between two places.
   const lat1 = toRadians(pointA.Location.lat);
   const lon1 = toRadians(pointA.Location.lon);
   const lat2 = toRadians(pointB.Location.lat);
@@ -50,7 +51,6 @@ function buildStationMap() {
     // Create Node from id and Location
     stationMap.set(stop.id, new Node(stop.id, loc));
   });
-  //console.log(`${allNodes.length} Nodes created.`);
   return stationMap;
 }
 function getNearestStations(point, stations, topK = 20) {
@@ -69,14 +69,7 @@ function getNearestStations(point, stations, topK = 20) {
 }
 
 function findThreeRoutes(Graph, maxArrivalTime, maxWalkingTime) {
-    console.log('findThreeRoutes called with:', { maxArrivalTime, maxWalkingTime });
-    console.log('Graph node count:', Object.keys(Graph.nodes).length);
-    console.log('Graph edge count:', Object.values(Graph.adjacencyList).reduce((sum, edges) => sum + edges.length, 0));
-    console.log('Edges from node 0:', Graph.adjacencyList[0]);
-    console.log('Edges to node 1:', Object.entries(Graph.adjacencyList)
-      .filter(([_, edges]) => edges.some(e => e.nodeId === '1'))
-      .map(([id]) => id));
-
+    //Returns Maximum Walking route, Minimum time, and balanced route options
     let queue = [[0, 0, 0, 0,[]]]; 
     const targetHalf = maxWalkingTime / 2; 
 
@@ -147,25 +140,8 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
     const notoverlap = nearestFromDst.filter(itemB => 
         !nearestFromSrc.some(itemA => itemA.station.id === itemB.station.id)
     );
-    //Uncomment if you need to check what are the nearest stations from each endpoint
-    // console.log("\n closest stations from src (Top 20):");
-    // console.table(nearestFromSrc.map(item => ({
-    // ID: item.station.id,
-    // Name: item.station.Location.name,
-    // Distance: `${Math.round(item.straightLineMeters)}m`,
-    // Walk: `${item.walkMinutes} min`
-    // })));
-    // console.log("\n closest stations from dst (Top 20):");
-    // console.table(nearestFromDst.map(item => ({
-    // ID: item.station.id,
-    // Name: item.station.Location.name,
-    // Distance: `${Math.round(item.straightLineMeters)}m`,
-    // Walk: `${item.walkMinutes} min`
-    // })));
 
     const Graph = new TransitGraph(src, dst);
-    //Add all the selected stations as edges of the graph
-    console.log("Adding stations into the graph...");
     nearestFromSrc.forEach(item => {
         const s = item.station;
         Graph.addStop(s.id, s.Location.name, s.Location.address, s.Location.lat, s.Location.lon);
@@ -174,11 +150,7 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
         const s = item.station;
         Graph.addStop(s.id, s.Location.name, s.Location.address, s.Location.lat, s.Location.lon);
     });
-    //If you want to see nodes, uncomment
-    //Graph.displayGraph();
 
-    //Add Routes as edges of the graph.
-    console.log("Adding Edges between two group of stations")
     //Holds all the request for API call for Parallel call
     const edgePromises = [];
 
@@ -244,16 +216,6 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
 
     // wait for the calls
     await Promise.all(edgePromises);
-    console.log('Transit edges between islands:', 
-      Object.entries(Graph.adjacencyList)
-        .filter(([id]) => id !== '0' && id !== '1')
-        .filter(([_, edges]) => edges.length > 0)
-        .map(([id, edges]) => `${id} -> ${edges.map(e => e.nodeId).join(', ')}`)
-    );
-
-    console.log("All edges added successfully.");
-    //If you want to see the edges, uncomment
-    //Graph.displayGraph();
 
     const results = findThreeRoutes(Graph,ArrivalTime, WalkingTime);
     const temp = {
@@ -261,16 +223,11 @@ export async function CalculatePath(srclat, srclon, dstlat, dstlon, ArrivalTime,
         fastest: getCoordsForPath(results.fastest, Graph),
         maxWalkingWithinLimit: getCoordsForPath(results.maxWalkingWithinLimit, Graph)
     }
-    //console.log(JSON.stringify(await Navigate(temp.fastest))); 
-    //printRouteSummary("Minimum Walking", test);
-    // printRouteSummary("Minimum Walking", results.minWalking);
-    // printRouteSummary("Fastest", results.fastest);
-    // printRouteSummary("Maximum Walking", results.maxWalkingWithinLimit);
-    console.log('ROUTES OUTPUT:', JSON.stringify(temp));
     return temp;
 }
 
 function getCoordsForPath(route, Graph){
+    //returns coordinates of the stops to later search for navigatable path
     if (!route || !route.path) {
         console.warn("route does not exist.");
         return null;
@@ -301,7 +258,6 @@ function getCoordsForPath(route, Graph){
 async function getNavigationRoute(route){
     //takes in a route object, returns a navigatable route in google routes format
     if (!route || !route.coords) {
-        console.log(`Can not find a path.`);
         return;
     }
     const { path, totalT, walkT, dist , coords} = route;
@@ -395,4 +351,3 @@ export async function Navigate(route){
         return null;
     }
 }
-//CalculatePath(40.7684, -73.9857, 40.7686, -73.9855, 40, 120);
