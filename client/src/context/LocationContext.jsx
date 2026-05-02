@@ -60,7 +60,8 @@ export function LocationProvider({ children }) {
         if (prev === 'health-denied' || prev === 'granted' || prev === 'health-granted') {
             return prev;
         } 
-        else{
+        else {
+            console.log(prev);
             return 'health-requesting';
         }
         })
@@ -69,6 +70,7 @@ export function LocationProvider({ children }) {
     const requestHealthData = async () => {
         //will be called when user hits grant permission
         //Currently only supports browser, which does not have special API to grant so. manually setting it. 
+        
         try {
             console.log("Requesting Health Data Permissions...");
             setPermissionState('health-granted');
@@ -84,7 +86,9 @@ export function LocationProvider({ children }) {
             setError('Geolocation is not supported by this browser.');
             return;
         }
-        setPermissionState('requesting');
+        if(permissionState==='idle'){
+            setPermissionState('requesting');
+        }
         setLoading(true);
 
         const onSuccess = (geo) => {
