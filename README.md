@@ -104,22 +104,24 @@ You should see:
 ### Creating an Account / Logging In
 WalkMore uses Google OAuth for authentication — no password is required. From the landing screen, click **Sign in with Google** and complete the OAuth flow. Your account is created automatically on first login and your session is maintained via a JWT stored locally.
 
+### Viewing Your Profile
+To view the profile page, click on the user icon located at the top right corner of the screen. It will display Google profile that user logs in, and display birthday, height, and weight that the user set upon account creation. 
+
+### Enabling the DEV Mode
+If navigated to the profile screen, there is an option to enable DEV mode. The DEV mode enables to manually set the starting point using preset values (I would recommend doing so, enabling current location will locate to Boston, which will cause failure to find a route within time constraint.)
+
 ### Planning a Route
-<!-- TODO: Walk through the RoutePlanningScreen inputs (destination autocomplete, arrival time, walking time preference) and what happens when you submit -->
+By clicking on search bar at the top that says "**Where to**?", the user will be guided to the planning page. There the user can input Destination in name, address, or coordinates formatted as latitude, longitude. Then the user must input arrival time, which expected to be between [1,180], and maximum walking time within [1,120]. Then the user can choose between 3 modes, but can also change it later in the results screen. 
 
 ### Viewing Route Results
-<!-- TODO: Describe the RouteResultsScreen — the optimization switcher, what the different route options look like, how the map displays the route -->
+Once the user puts valid inputs and hit **Find Routes**, the system will return the route results. It will show expected distance, total time, and walking time. If there exists no route that is feasible, system will not display a route. Unfortunately, the user will have to try again from route planning page with more lenient inputs. 
 
 ### Navigating a Route
-<!-- TODO: Describe the navigation flow — how turn-by-turn directions work, what the NavigationPanel shows, how the user progresses through steps -->
-
-### Viewing Your Profile
-<!-- TODO: Describe the ProfileScreen — what user info is shown, any settings or preferences stored -->
+Assuming that the system has returned valid routes in the results screen, the user may hit on the "**Start Navigation**" button to go back to the map and see the path. The small popup will show up at the top of the map showing the segments of the path. 
+You can open the dev mode option by clicking on orange **</>** button. There you can jump to the next station using **jump** button, and by doing so the pop-up above will change accordingly. Once you reach the destination, it will show a green page with done button. Click on the **Done** button to save data of the trip. It will save only if you have allowed the system to acquire health data in the beginning. 
 
 ### Viewing Weekly Progress
-<!-- TODO: Describe the ProgressScreen — steps tracked, trip history, any stats or charts shown -->
-
----
+Click on **Progress** page at the bottom right to navigate to the progress page. By doing so, the system will display daily statistics, along with weekly / monthly plot. User can toggle by clicking on the corresponding button.  
 
 ## Testing
 
