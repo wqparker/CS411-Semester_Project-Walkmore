@@ -102,26 +102,26 @@ You should see:
 ## Using the App
 
 ### Creating an Account / Logging In
-WalkMore uses Google OAuth for authentication — no password is required. From the landing screen, click **Sign in with Google** and complete the OAuth flow. Your account is created automatically on first login and your session is maintained via a JWT stored locally.
+WalkMore uses Google OAuth for authentication — no password is required. From the landing screen, click **Sign in with Google** and complete the OAuth flow. NOTE: to use our system you will need an existing google account. Your account is created automatically on first login and your session is maintained via a JWT stored locally.
 
 ### Viewing Your Profile
-To view the profile page, click on the user icon located at the top right corner of the screen. It will display Google profile that user logs in, and display birthday, height, and weight that the user set upon account creation. 
+To view the profile page, click on the user icon located at the top right corner of the screen. It will display Google profile that user logs in, and display birthday, height, and weight that the user set upon account creation. Options to log out and delete account (with extra confirmation) are available. 
 
 ### Enabling the DEV Mode
-If navigated to the profile screen, there is an option to enable DEV mode. The DEV mode enables to manually set the starting point using preset values (I would recommend doing so, enabling current location will locate to Boston, which will cause failure to find a route within time constraint.)
+If navigated to the profile screen, there is an option to enable DEV mode. The DEV mode enables to manually set the starting point using preset values (I would recommend doing so, enabling current location will locate to Boston, which will cause failure to find a route within time constraint.) You are also able to type in custom coordinates, but we unfortunately did not have time to finish implemenation of more user freindly way to set a current location as origin. A feasible workaround is the ending location of one completed route can be used as the origin for a new one if one goes straight into another route plan. 
 
 ### Planning a Route
 By clicking on search bar at the top that says "**Where to**?", the user will be guided to the planning page. There the user can input Destination in name, address, or coordinates formatted as latitude, longitude. Then the user must input arrival time, which expected to be between [1,180], and maximum walking time within [1,120]. Then the user can choose between 3 modes, but can also change it later in the results screen. 
 
 ### Viewing Route Results
-Once the user puts valid inputs and hit **Find Routes**, the system will return the route results. It will show expected distance, total time, and walking time. If there exists no route that is feasible, system will not display a route. Unfortunately, the user will have to try again from route planning page with more lenient inputs. 
+Once the user puts valid inputs and hit **Find Routes** along with their selected optimization mode, the system will return the route results. It will show expected distance, total time, and walking time. It will display the initially selected mode, but you may click the others as well and see their immediate results for side-by-side comparrison. If there exists no route that is feasible, system will not display a route. Unfortunately, the user will have to try again from route planning page with more lenient inputs. For a point of refernce a trip between Empire State building and Times Square has best parameters of 40 minutes arrival time and 10 minutes walking. 
 
 ### Navigating a Route
 Assuming that the system has returned valid routes in the results screen, the user may hit on the "**Start Navigation**" button to go back to the map and see the path. The small popup will show up at the top of the map showing the segments of the path. 
-You can open the dev mode option by clicking on orange **</>** button. There you can jump to the next station using **jump** button, and by doing so the pop-up above will change accordingly. Once you reach the destination, it will show a green page with done button. Click on the **Done** button to save data of the trip. It will save only if you have allowed the system to acquire health data in the beginning. 
+You can open the dev mode option by clicking on orange **</>** button. There you can jump to the next station using **jump** button, and by doing so the pop-up above will change accordingly. We implemented functionality to gather information on each different leg of tranist (walking/bus/train segments of journey) which are reflected as oragane dots on the highlighted route as points of transition; but for the sake of our demo during presentations we only made a total of 4 jump points via dev mode for any trip, so some legs that have more than 4 transition points (orange dots) will appear to skip them but this was just sake of time for live demonstration. Once you reach the destination, it will show a green page with done button. Click on the **Done** button to save data of the trip. It will save only if you have allowed the system to acquire health data in the beginning. you can end routes early, but must meet a minimum total distance travelled thresohld inorder for it to save as a valid trip with data. 
 
 ### Viewing Weekly Progress
-Click on **Progress** page at the bottom right to navigate to the progress page. By doing so, the system will display daily statistics, along with weekly / monthly plot. User can toggle by clicking on the corresponding button.  
+Click on **Progress** page at the bottom right to navigate to the progress page. By doing so, the system will display daily statistics, along with weekly / monthly plot. User can toggle by clicking on the corresponding button. Daily insights will show statistics for the current calendar day and trips completed during it only. 
 
 ## Testing
 
