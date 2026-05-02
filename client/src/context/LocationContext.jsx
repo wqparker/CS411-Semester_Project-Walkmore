@@ -54,6 +54,29 @@ export function LocationProvider({ children }) {
         });
     }, []);
 
+    const proceedToHealthStep = () => {
+        //If user has been asked for permission, do not ask. If not, ask for it. 
+        setPermissionState(prev => {
+        if (prev === 'health-denied' || prev === 'granted' || prev === 'health-granted') {
+            return prev;
+        } 
+        else{
+            return 'health-requesting';
+        }
+        })
+    };
+
+    const requestHealthData = async () => {
+        //will be called when user hits grant permission
+        //Currently only supports browser, which does not have special API to grant so. manually setting it. 
+        try {
+            console.log("Requesting Health Data Permissions...");
+            setPermissionState('health-granted');
+        } catch (err) {
+            console.error("Health data access denied", err);
+            setPermissionState('granted'); 
+        }
+    };
     // Called when user taps "Enable Location" in the pre-prompt card
     const requestLocation = () => {
         if (!navigator.geolocation) {
@@ -71,10 +94,10 @@ export function LocationProvider({ children }) {
                     setAccuracy(geo.coords.accuracy);
                     setError(null);
                     setLoading(false);
-                    setPermissionState('granted');
                 }
                 return prev;
             });
+            proceedToHealthStep();
         };
 
         const onError = (err) => {
@@ -103,8 +126,8 @@ export function LocationProvider({ children }) {
         setDemoMode(true);
         setError(null);
         setLoading(false);
-        setPermissionState('granted');
         toggleDevMode(true);
+        proceedToHealthStep();
     };
 
     const clearMockPosition = () => {
@@ -142,11 +165,13 @@ export function LocationProvider({ children }) {
                 loading,
                 demoMode,
                 permissionState,
+                setPermissionState,
                 requestLocation,
                 setMockPosition,
                 clearMockPosition,
                 devModeEnabled,
                 toggleDevMode,
+                requestHealthData,
             }}
         >
             {children}

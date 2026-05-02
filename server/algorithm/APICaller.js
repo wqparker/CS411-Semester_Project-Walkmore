@@ -1,12 +1,20 @@
 import 'dotenv/config';
 
+/* API Caller class  
+  
+  Responsible for any google API calls that the system has to make. 
+
+  The API key must be inside the env folder as
+  GOOGLE_API_KEY=?
+
+  env folder must exist inside the server folder. (CS411-Walkmore/server)
+*/ 
 const apiKey = process.env.GOOGLE_API_KEY;
 
 async function getWalkingRoute(srclat, srclon, dstlat, dstlon) {
   //returns shortest walking distance between two location
   //Expects four inputs, latitude and longitude of origin, followed by latitude and longitude of destination
   const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
-  
 
   try {
     const response = await fetch(url, {
@@ -31,8 +39,6 @@ async function getWalkingRoute(srclat, srclon, dstlat, dstlon) {
 
     const data = await response.json();
     const route = data.routes[0]
-    //console.log("result:", data); 
-    // uncomment when you need a log
     return {
       distance: route.distanceMeters,     
       totalTime: route.duration,      
@@ -81,8 +87,6 @@ async function getTransitRoute(srclat, srclon, dstlat, dstlon) {
           pureWalkingSeconds += parseInt(step.staticDuration || step.duration);
       }
       });
-    //console.log("Walking Time: ", pureWalkingSeconds, "Distance:", route.distanceMeters, "Total time:", route.duration); 
-    //Uncomment when you need a log
 
     return {
       distance: parseInt(route.distanceMeters),     
@@ -108,6 +112,7 @@ async function getAddressFromCoord(input){
 }
 
 async function getNameFromCoord(input) {
+  //given a coordinate, convert it to name
   const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${input}&key=${apiKey}`;
 
   try {
@@ -165,7 +170,7 @@ async function getAddressFromName(input){
 }
 
 async function getTransitNavigationRoute(srclat, srclon, dstlat, dstlon) {
-  //returns shortest walking distance between two location
+  //returns navigatable transit path between two location
   //Expects four inputs, latitude and longitude of origin, followed by latitude and longitude of destination
   const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 
@@ -224,7 +229,7 @@ async function getTransitNavigationRoute(srclat, srclon, dstlat, dstlon) {
 }
 
 async function getWalkingNavigationRoute(srclat, srclon, dstlat, dstlon) {
-  //returns shortest walking distance between two location
+  //returns navigatable walking path between two location
   //Expects four inputs, latitude and longitude of origin, followed by latitude and longitude of destination
   const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 

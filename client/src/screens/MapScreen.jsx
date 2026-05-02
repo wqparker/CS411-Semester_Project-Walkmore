@@ -16,7 +16,7 @@ import DemoPanel from '../components/map/DemoPanel';
 
 export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
   const { position, accuracy, error, loading, demoMode,
-          permissionState, requestLocation, setMockPosition, devModeEnabled } = useLocation();
+          permissionState, requestLocation, setMockPosition, devModeEnabled, requestHealthData, setPermissionState } = useLocation();
   const { token, user } = useAuth();
   const mapRef = useRef(null);
 
@@ -50,6 +50,12 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
   };
 
   const handleEndTrip = async () => {
+    if (permissionState !== 'health-granted') {
+      console.warn('Permission not granted. Ending session without saving.');
+      session.endSession();
+      onNavigate('map', null);
+      return;
+    }
     try {
       await saveTrip(token, {
         routeObj,
@@ -213,6 +219,74 @@ export default function MapScreen({ onNavigate, onAvatarClick, routeData }) {
           </div>
         )}
 
+        {/* Health data permission card */}
+        {permissionState === 'health-requesting' && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1050,
+            background: 'var(--bg)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 32px',
+            gap: 16,
+          }}>
+            <div style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: 'var(--primary-light)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 28,
+            }}>
+      
+            </div>
+            <h2 style={{
+              fontSize: 20,
+              fontWeight: 700,
+              color: 'var(--text)',
+              textAlign: 'center',
+              margin: 0
+            }}>
+            Connect Your Health Data
+            </h2>
+            <p style={{
+              fontSize: 14,
+              color: 'var(--text-mid)',
+              textAlign: 'center',
+              lineHeight: 1.5,
+              margin: 0
+            }}>
+            WalkMore needs your step count to track your progress and reward your daily achievements.
+          </p>
+    
+          <button 
+            className="btn-primary" 
+            style={{ width: '100%', marginTop: 8 }}
+            onClick={requestHealthData}
+          >
+          Grant Permission
+          </button>
+    
+          <button
+          onClick={() => setPermissionState('health-denied')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--text-mid)',
+            fontSize: 13,
+            fontFamily: 'inherit',
+          }}
+        >
+        Not now — I'll do it later
+        </button>
+      </div>
+      )}
         {/* Leaflet Map */}
         <MapContainer
           center={position}
